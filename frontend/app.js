@@ -1,5 +1,6 @@
 /**
- * Frontend Application Logic for College Lab Record Automation System
+ * RECORDEXT - College Laboratory Record Automation System
+ * Frontend Application Logic
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -11,24 +12,17 @@ document.addEventListener("DOMContentLoaded", () => {
     : "";
 
   // State
-  let currentMode = "new"; // Default to "new" mode for zero-barrier generation
+  let currentMode = "create"; // Default mode is "create" for zero-barrier instant generation
   let uploadedRecordFileId = null;
-  let selectedTemplateId = "python_lab_reference";
   let attachedImageData = null;
   let activeAiTargetField = null;
   let activeAiSuggestion = null;
 
-  // DOM Elements
+  // DOM Elements - Navigation
   const tabBtns = document.querySelectorAll(".nav-tabs .tab-btn");
   const tabContents = document.querySelectorAll(".tab-content");
-  const selectTemplate = document.getElementById("select-template");
 
-  // Form Inputs
-  const expSubjectSelect = document.getElementById("exp-subject");
-  const expProcHeadingInput = document.getElementById("exp-proc-heading");
-  const expCodeHeadingInput = document.getElementById("exp-code-heading");
-  const lblProcHeading = document.getElementById("lbl-proc-heading");
-  const lblCodeHeading = document.getElementById("lbl-code-heading");
+  // DOM Elements - Form Inputs
   const expNumberInput = document.getElementById("exp-number");
   const expDateInput = document.getElementById("exp-date");
   const expTitleInput = document.getElementById("exp-title");
@@ -41,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const expOutputInput = document.getElementById("exp-output");
   const expResultInput = document.getElementById("exp-result");
 
-  // Output Tabs
+  // DOM Elements - Output Tabs
   const outputTabBtns = document.querySelectorAll(".output-tab-btn");
   const outputTextArea = document.getElementById("output-text-area");
   const outputImageArea = document.getElementById("output-image-area");
@@ -49,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const outputImgInput = document.getElementById("output-img-input");
   const imagePreview = document.getElementById("image-preview");
 
-  // Dropzone Elements
+  // DOM Elements - Dropzone
   const recordDropzone = document.getElementById("record-dropzone");
   const recordFileInput = document.getElementById("input-record-file");
   const recordAnalysisBox = document.getElementById("record-analysis-box");
@@ -58,8 +52,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const statTotalPages = document.getElementById("stat-total-pages");
   const statStudentRoll = document.getElementById("stat-student-roll");
 
-  // Buttons & Banners
+  // DOM Elements - Buttons & Banners
   const btnSampleData = document.getElementById("btn-sample-data");
+  const btnClearForm = document.getElementById("btn-clear-form");
   const btnPreview = document.getElementById("btn-preview");
   const btnGenerate = document.getElementById("btn-generate");
   const btnDownloadFile = document.getElementById("btn-download-file");
@@ -67,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const inlineStatusBanner = document.getElementById("inline-status-banner");
   const btnSaveDraft = document.getElementById("btn-save-draft");
 
-  // Modals
+  // DOM Elements - Modals
   const aiModal = document.getElementById("ai-modal");
   const btnCloseModal = document.getElementById("btn-close-modal");
   const btnAcceptAi = document.getElementById("btn-accept-ai");
@@ -83,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnApplyImport = document.getElementById("btn-apply-import");
   const importRawText = document.getElementById("import-raw-text");
 
-  // Preview elements
+  // DOM Elements - Preview
   const prevExNo = document.getElementById("prev-ex-no");
   const prevDate = document.getElementById("prev-date");
   const prevTitle = document.getElementById("prev-title");
@@ -98,27 +93,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const previewFootRight1 = document.getElementById("preview-foot-right-1");
   const previewFootLeft2 = document.getElementById("preview-foot-left-2");
   const previewFootRight2 = document.getElementById("preview-foot-right-2");
-  const prevProcHeading = document.getElementById("prev-proc-heading");
-  const prevCodeHeading = document.getElementById("prev-code-heading");
+
   const viewModeBtns = document.querySelectorAll(".view-mode-toggle .view-btn");
   const bookSpreadContainer = document.getElementById("book-spread-container");
   const sheetLeft = document.getElementById("sheet-left");
   const sheetRight = document.getElementById("sheet-right");
   const btnFloatingPreview = document.getElementById("btn-floating-preview");
 
-  // Subject presets dictionary
-  const SUBJECT_PRESETS = {
-    python: {
-      proc: "ALGORITHM",
-      code: "CODING",
-      codePlaceholder: "def solution():\n    # Python program here",
-      sample: {
-        num: "1.D",
-        title: "COMPREHENSION",
-        sub: "GENERATOR COMPREHENSION",
-        aim: "To create a generator using generator comprehension and iterate over elements using functions.",
-        algo: "1. Define a generator function to create squared values.\n2. Use generator comprehension syntax with parentheses.\n3. Iterate over the generator object.\n4. Display the yielded values.",
-        code: `def generate_squares(n):
+  // --- DEFAULT STANDARD EXPERIMENT (Always pre-filled on load) ---
+  const DEFAULT_EXPERIMENT = {
+    num: "1.D",
+    date: "23-09-2026",
+    title: "COMPREHENSION",
+    sub: "GENERATOR COMPREHENSION",
+    student_name: "ADARSH MENON",
+    register_number: "714025247005",
+    aim: "To create a generator using generator comprehension and iterate over elements using functions.",
+    algo: "1. Define a generator function to create squared values.\n2. Use generator comprehension syntax with parentheses.\n3. Iterate over the generator object.\n4. Display the yielded values.",
+    code: `def generate_squares(n):
     return (x**2 for x in range(n))
 
 def main():
@@ -129,307 +121,145 @@ def main():
 
 if __name__ == "__main__":
     main()`,
-        output: "Generating squares up to 5:\nSquare: 0\nSquare: 1\nSquare: 4\nSquare: 9\nSquare: 16",
-        result: "The generator comprehension was implemented successfully and values were yielded on demand."
-      }
-    },
-    java: {
-      proc: "ALGORITHM",
-      code: "PROGRAM",
-      codePlaceholder: "public class Solution {\n    public static void main(String[] args) {\n        // Java code here\n    }\n}",
-      sample: {
-        num: "2.A",
-        title: "POLYMORPHISM & INHERITANCE",
-        sub: "METHOD OVERRIDING",
-        aim: "To implement runtime polymorphism and dynamic method dispatch in Java.",
-        algo: "1. Create parent class 'Shape' with draw() method.\n2. Create subclasses 'Circle' and 'Rectangle' overriding draw().\n3. Instantiate subclasses using parent reference.\n4. Invoke overridden methods and observe runtime binding.",
-        code: `class Shape {
-    void draw() {
-        System.out.println("Drawing generic shape");
-    }
-}
-class Circle extends Shape {
-    @Override
-    void draw() {
-        System.out.println("Drawing circle with radius r");
-    }
-}
-public class Main {
-    public static void main(String[] args) {
-        Shape s = new Circle();
-        s.draw();
-    }
-}`,
-        output: "Drawing circle with radius r",
-        result: "Runtime polymorphism was successfully implemented and verified in Java."
-      }
-    },
-    cpp: {
-      proc: "ALGORITHM",
-      code: "PROGRAM",
-      codePlaceholder: "#include <iostream>\nusing namespace std;\n\nint main() {\n    // C++ code here\n    return 0;\n}",
-      sample: {
-        num: "3.A",
-        title: "BINARY SEARCH TREE",
-        sub: "BST INSERTION & INORDER",
-        aim: "To construct a binary search tree and display elements in ascending order via in-order traversal.",
-        algo: "1. Define Node structure with data, left, and right pointers.\n2. Implement insert() function recursively comparing keys.\n3. Implement inOrder() traversal (Left, Root, Right).\n4. Test with given input elements.",
-        code: `#include <iostream>
-using namespace std;
-
-struct Node {
-    int val;
-    Node *left, *right;
-    Node(int v) : val(v), left(nullptr), right(nullptr) {}
-};
-
-Node* insert(Node* root, int key) {
-    if (!root) return new Node(key);
-    if (key < root->val) root->left = insert(root->left, key);
-    else root->right = insert(root->right, key);
-    return root;
-}
-
-void inOrder(Node* root) {
-    if (!root) return;
-    inOrder(root->left);
-    cout << root->val << " ";
-    inOrder(root->right);
-}
-
-int main() {
-    Node* root = nullptr;
-    int keys[] = {50, 30, 20, 40, 70, 60, 80};
-    for (int k : keys) root = insert(root, k);
-    cout << "Inorder traversal: ";
-    inOrder(root);
-    cout << endl;
-    return 0;
-}`,
-        output: "Inorder traversal: 20 30 40 50 60 70 80",
-        result: "The binary search tree was created and traversed in order successfully."
-      }
-    },
-    dbms: {
-      proc: "PROCEDURE",
-      code: "SQL QUERIES",
-      codePlaceholder: "CREATE TABLE Student (\n    id INT PRIMARY KEY,\n    name VARCHAR(50)\n);",
-      sample: {
-        num: "4.A",
-        title: "EMPLOYEE & DEPARTMENT DATABASE",
-        sub: "DDL, DML & AGGREGATE FUNCTIONS",
-        aim: "To create Employee and Department relational tables, enforce constraints, and execute aggregation queries.",
-        algo: "1. Create Department table with DeptID as primary key.\n2. Create Employee table referencing DeptID with foreign key.\n3. Insert representative tuple records.\n4. Perform GROUP BY and aggregate functions (COUNT, AVG).",
-        code: `-- DDL: Create Tables
-CREATE TABLE Department (
-    DeptID INT PRIMARY KEY,
-    DeptName VARCHAR(50) NOT NULL
-);
-
-CREATE TABLE Employee (
-    EmpID INT PRIMARY KEY,
-    EmpName VARCHAR(50) NOT NULL,
-    Salary DECIMAL(10, 2),
-    DeptID INT,
-    FOREIGN KEY (DeptID) REFERENCES Department(DeptID)
-);
-
--- DML: Insert and Query
-INSERT INTO Department VALUES (1, 'Engineering'), (2, 'Finance');
-INSERT INTO Employee VALUES (101, 'Alice', 75000, 1), (102, 'Bob', 82000, 1);
-
-SELECT d.DeptName, COUNT(e.EmpID) AS HeadCount, AVG(e.Salary) AS AvgSalary
-FROM Department d JOIN Employee e ON d.DeptID = e.DeptID
-GROUP BY d.DeptName;`,
-        output: "DeptName    | HeadCount | AvgSalary\nEngineering | 2         | 78500.00",
-        result: "Relational tables and aggregate queries were executed and verified successfully."
-      }
-    },
-    linux: {
-      proc: "PROCEDURE",
-      code: "COMMANDS",
-      codePlaceholder: "#!/bin/bash\n# Linux shell script here",
-      sample: {
-        num: "5.A",
-        title: "SHELL SCRIPTING & PROCESS MONITORING",
-        sub: "BASH SCRIPT AUTOMATION",
-        aim: "To automate system process monitoring and disk usage logging using bash shell scripts.",
-        algo: "1. Write bash script to extract disk usage using df -h.\n2. Filter root partition percentage using awk.\n3. Check threshold limit (> 80%).\n4. Output status report.",
-        code: `#!/bin/bash
-# Disk usage and process monitor
-THRESHOLD=80
-USAGE=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
-
-echo "=== SYSTEM HEALTH CHECK ==="
-echo "Current Disk Usage: ${USAGE}%"
-if [ "$USAGE" -gt "$THRESHOLD" ]; then
-    echo "WARNING: Disk space exceeded ${THRESHOLD}% threshold!"
-else
-    echo "STATUS: Disk space is within normal operating limits."
-fi
-
-echo "Top 3 CPU Processes:"
-ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head -n 4`,
-        output: "=== SYSTEM HEALTH CHECK ===\nCurrent Disk Usage: 42%\nSTATUS: Disk space is within normal operating limits.\nTop 3 CPU Processes:\n  PID  PPID CMD                         %MEM %CPU\n 1204     1 /usr/lib/systemd/systemd     0.3  1.2\n 4512  1204 /usr/bin/dockerd             2.1  0.8\n 8910  4512 /usr/bin/containerd          1.5  0.4",
-        result: "The shell script was executed and system monitoring metrics were recorded successfully."
-      }
-    },
-    networks: {
-      proc: "PROCEDURE",
-      code: "COMMANDS",
-      codePlaceholder: "# Network socket program or packet trace commands",
-      sample: {
-        num: "6.A",
-        title: "SOCKET PROGRAMMING (TCP CLIENT-SERVER)",
-        sub: "BIDIRECTIONAL COMMUNICATION",
-        aim: "To implement full-duplex client-server communication using TCP sockets.",
-        algo: "1. Server initializes socket, binds to IP and port, and listens.\n2. Client connects to server socket via IP address.\n3. Client sends greeting payload; server responds.\n4. Socket connection is gracefully closed.",
-        code: `# Server Code
-import socket
-
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(('127.0.0.1', 8080))
-server.listen(1)
-print("Server listening on port 8080...")
-conn, addr = server.accept()
-print(f"Connected by {addr}")
-data = conn.recv(1024)
-print(f"Received: {data.decode()}")
-conn.sendall(b"ACK: Message received")
-conn.close()`,
-        output: "Server listening on port 8080...\nConnected by ('127.0.0.1', 54321)\nReceived: HELLO_SERVER\nACK: Message received",
-        result: "TCP client-server connection was established and verified successfully."
-      }
-    },
-    web: {
-      proc: "PROCEDURE",
-      code: "SOURCE CODE",
-      codePlaceholder: "<!DOCTYPE html>\n<html>\n<head><title>Web App</title></head>\n<body>...</body>\n</html>",
-      sample: {
-        num: "7.A",
-        title: "RESPONSIVE ACCESSIBLE DATA GRID",
-        sub: "HTML5, CSS3 & FETCH API",
-        aim: "To design a responsive, accessible client-side data viewer with live search filtering.",
-        algo: "1. Create semantic HTML markup with accessible table.\n2. Style with responsive CSS Grid and Flexbox.\n3. Fetch mock JSON data using fetch() API.\n4. Bind search input to dynamically filter displayed records.",
-        code: `const searchInput = document.getElementById("search");
-const tableRows = document.querySelectorAll("#dataTable tbody tr");
-
-searchInput.addEventListener("input", (e) => {
-  const term = e.target.value.toLowerCase();
-  tableRows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    row.style.display = text.includes(term) ? "" : "none";
-  });
-});`,
-        output: "Search: 'alice'\nFound 1 matching record: [ID: 101, Name: Alice, Dept: Engineering]",
-        result: "Interactive web data viewer was implemented and verified with zero console errors."
-      }
-    },
-    custom: {
-      proc: "PROCEDURE",
-      code: "PROGRAM",
-      codePlaceholder: "// Enter source code or commands",
-      sample: null
-    }
+    output: "Generating squares up to 5:\nSquare: 0\nSquare: 1\nSquare: 4\nSquare: 9\nSquare: 16",
+    result: "The generator comprehension was implemented successfully and values were yielded on demand."
   };
 
-  // --- INITIALIZATION ---
-  fetchTemplates();
-  loadDrafts();
-  updateLivePreview();
+  const allInputs = [
+    expNumberInput, expDateInput, expTitleInput, expSubtitleInput,
+    studentNameInput, registerNumberInput, expAimInput, expAlgoInput,
+    expCodeInput, expOutputInput, expResultInput
+  ];
+
+  // Helper to populate experiment form
+  function fillExperimentForm(data = DEFAULT_EXPERIMENT) {
+    if (expNumberInput) expNumberInput.value = data.num || data.experiment_number || "1.D";
+    if (expDateInput) expDateInput.value = data.date || "23-09-2026";
+    if (expTitleInput) expTitleInput.value = data.title || "COMPREHENSION";
+    if (expSubtitleInput) expSubtitleInput.value = data.sub || data.subtitle || "";
+    if (studentNameInput) studentNameInput.value = data.student_name || "ADARSH MENON";
+    if (registerNumberInput) registerNumberInput.value = data.register_number || "714025247005";
+    if (expAimInput) expAimInput.value = data.aim || "";
+    if (expAlgoInput) expAlgoInput.value = data.algo || data.algorithm || "";
+    if (expCodeInput) expCodeInput.value = data.code || data.coding || "";
+    if (expOutputInput) expOutputInput.value = data.output || "";
+    if (expResultInput) expResultInput.value = data.result || "";
+
+    allInputs.forEach(i => { if (i) i.classList.remove("has-error"); });
+    if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
+    updateLivePreview();
+  }
+
+  // Helper to clear form for a new experiment
+  function clearExperimentForm() {
+    if (expNumberInput) expNumberInput.value = "";
+    if (expDateInput) expDateInput.value = new Date().toLocaleDateString("en-GB").replace(/\//g, "-");
+    if (expTitleInput) expTitleInput.value = "";
+    if (expSubtitleInput) expSubtitleInput.value = "";
+    if (expAimInput) expAimInput.value = "";
+    if (expAlgoInput) expAlgoInput.value = "";
+    if (expCodeInput) expCodeInput.value = "";
+    if (expOutputInput) expOutputInput.value = "";
+    if (expResultInput) expResultInput.value = "";
+    attachedImageData = null;
+    if (imagePreview) {
+      imagePreview.innerHTML = "";
+      imagePreview.classList.add("hidden");
+    }
+    allInputs.forEach(i => { if (i) i.classList.remove("has-error"); });
+    if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
+    updateLivePreview();
+  }
+
+  // Helper to display status banner
+  function showStatus(type, message, htmlContent = null) {
+    if (!inlineStatusBanner) return;
+    inlineStatusBanner.className = `inline-status-banner status-${type}`;
+    if (htmlContent) {
+      inlineStatusBanner.innerHTML = htmlContent;
+    } else {
+      inlineStatusBanner.textContent = message;
+    }
+    inlineStatusBanner.classList.remove("hidden");
+  }
+
+  // Clear errors when typing
+  allInputs.forEach(input => {
+    if (input) {
+      input.addEventListener("input", () => {
+        input.classList.remove("has-error");
+        if (inlineStatusBanner && inlineStatusBanner.classList.contains("status-error")) {
+          inlineStatusBanner.classList.add("hidden");
+        }
+        updateLivePreview();
+      });
+    }
+  });
 
   // --- TAB SWITCHING ---
   tabBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       tabBtns.forEach(b => b.classList.remove("active"));
-      tabContents.forEach(c => c.classList.remove("active"));
+      tabContents.forEach(c => c.classList.add("hidden"));
       btn.classList.add("active");
 
       const targetId = btn.getAttribute("data-tab");
       const targetContent = document.getElementById(targetId);
-      if (targetContent) targetContent.classList.add("active");
+      if (targetContent) targetContent.classList.remove("hidden");
 
       if (targetId === "tab-continue") {
         currentMode = "continue";
-      } else if (targetId === "tab-new") {
-        currentMode = "new";
+      } else {
+        currentMode = "create";
       }
     });
   });
 
-  // --- FETCH TEMPLATES ---
-  async function fetchTemplates() {
-    try {
-      const res = await fetch(API_BASE + "/api/templates");
-      if (res.ok) {
-        const templates = await res.json();
-        selectTemplate.innerHTML = "";
-        const grid = document.getElementById("templates-grid");
-        if (grid) grid.innerHTML = "";
+  // --- BUTTON ACTIONS ---
+  if (btnSampleData) {
+    btnSampleData.addEventListener("click", () => fillExperimentForm());
+  }
 
-        templates.forEach(t => {
-          const opt = document.createElement("option");
-          opt.value = t.id;
-          opt.textContent = `${t.name} (Font: ${t.font_family})`;
-          selectTemplate.appendChild(opt);
-
-          if (grid) {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <div class="card-header">
-                <strong>${t.name}</strong>
-                <span class="badge badge-success">Calibrated</span>
-              </div>
-              <div class="card-body">
-                <p style="font-size:0.85rem;color:#64748b;">${t.description || "Standard format"}</p>
-                <div style="margin-top:0.75rem;font-size:0.8rem;">
-                  <div>Font: <strong>${t.font_family}</strong></div>
-                  <div>Code Font: <strong>${t.code_font_family}</strong></div>
-                  <div>Margins: <strong>${t.margins.top}"</strong></div>
-                  <div>Page Border: <strong>${t.has_page_border ? 'Active' : 'None'}</strong></div>
-                </div>
-              </div>
-            `;
-            grid.appendChild(card);
-          }
-        });
-      }
-    } catch (e) {
-      console.warn("Could not fetch templates:", e);
-    }
+  if (btnClearForm) {
+    btnClearForm.addEventListener("click", () => clearExperimentForm());
   }
 
   // --- DROPZONE FOR EXISTING RECORD ---
-  recordDropzone.addEventListener("click", () => recordFileInput.click());
-  recordDropzone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    recordDropzone.classList.add("dragover");
-  });
-  recordDropzone.addEventListener("dragleave", () => recordDropzone.classList.remove("dragover"));
-  recordDropzone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    recordDropzone.classList.remove("dragover");
-    if (e.dataTransfer.files.length) {
-      handleRecordUpload(e.dataTransfer.files[0]);
-    }
-  });
-  recordFileInput.addEventListener("change", () => {
-    if (recordFileInput.files.length) {
-      handleRecordUpload(recordFileInput.files[0]);
-    }
-  });
+  if (recordDropzone) {
+    recordDropzone.addEventListener("click", () => recordFileInput.click());
+    recordDropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      recordDropzone.classList.add("dragover");
+    });
+    recordDropzone.addEventListener("dragleave", () => recordDropzone.classList.remove("dragover"));
+    recordDropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      recordDropzone.classList.remove("dragover");
+      if (e.dataTransfer.files.length) {
+        handleRecordUpload(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
+  if (recordFileInput) {
+    recordFileInput.addEventListener("change", () => {
+      if (recordFileInput.files.length) {
+        handleRecordUpload(recordFileInput.files[0]);
+      }
+    });
+  }
 
   async function handleRecordUpload(file) {
     if (!file.name.endsWith(".docx")) {
-      alert("Please upload a valid .docx Word document.");
+      showStatus("error", "Please upload a valid .docx Word document.");
       return;
     }
 
     const formData = new FormData();
     formData.append("file", file);
 
-    recordDropzone.querySelector("h3").textContent = "Analyzing document structure...";
+    const heading = recordDropzone.querySelector("h3");
+    if (heading) heading.textContent = "Analyzing document structure...";
 
     try {
       const res = await fetch(API_BASE + "/api/upload/document", {
@@ -443,7 +273,6 @@ searchInput.addEventListener("input", (e) => {
         recordAnalysisBox.classList.remove("hidden");
         recordDropzone.classList.add("hidden");
 
-        // Experiments badges
         detectedExpTags.innerHTML = "";
         if (data.detected_experiments && data.detected_experiments.length) {
           data.detected_experiments.forEach(num => {
@@ -465,14 +294,15 @@ searchInput.addEventListener("input", (e) => {
           registerNumberInput.value = rNum;
         }
 
+        showStatus("success", `Record "${file.name}" analyzed successfully. Ready to append experiment.`);
         updateLivePreview();
       } else {
-        alert("Could not analyze document: " + (data.warnings.join(", ") || "Unknown error"));
-        recordDropzone.querySelector("h3").innerHTML = 'Drop your existing lab record here, or <span class="browse-link">browse</span>';
+        showStatus("error", "Could not analyze document: " + (data.warnings.join(", ") || "Unknown error"));
+        if (heading) heading.innerHTML = 'Drop your existing lab record here, or <span class="browse-link">browse</span>';
       }
     } catch (err) {
-      alert("Upload failed: " + err.message);
-      recordDropzone.querySelector("h3").innerHTML = 'Drop your existing lab record here, or <span class="browse-link">browse</span>';
+      showStatus("error", "Upload failed: " + err.message);
+      if (heading) heading.innerHTML = 'Drop your existing lab record here, or <span class="browse-link">browse</span>';
     }
   }
 
@@ -489,7 +319,7 @@ searchInput.addEventListener("input", (e) => {
       } else if (mode === "image") {
         outputTextArea.classList.add("hidden");
         outputImageArea.classList.remove("hidden");
-      } else {
+      } else if (mode === "both") {
         outputTextArea.classList.remove("hidden");
         outputImageArea.classList.remove("hidden");
       }
@@ -498,54 +328,22 @@ searchInput.addEventListener("input", (e) => {
   });
 
   // --- IMAGE UPLOADER ---
-  imageUploader.addEventListener("click", () => outputImgInput.click());
-  outputImgInput.addEventListener("change", (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        attachedImageData = event.target.result;
-        imagePreview.innerHTML = `<img src="${attachedImageData}" alt="Screenshot">`;
-        imagePreview.classList.remove("hidden");
-        updateLivePreview();
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
-  // --- SUBJECT SELECTION LISTENER ---
-  if (expSubjectSelect) {
-    expSubjectSelect.addEventListener("change", () => {
-      const subKey = expSubjectSelect.value;
-      const preset = SUBJECT_PRESETS[subKey] || SUBJECT_PRESETS.python;
-      if (expProcHeadingInput) expProcHeadingInput.value = preset.proc;
-      if (expCodeHeadingInput) expCodeHeadingInput.value = preset.code;
-      if (preset.codePlaceholder && expCodeInput) {
-        expCodeInput.placeholder = preset.codePlaceholder;
+  if (imageUploader && outputImgInput) {
+    imageUploader.addEventListener("click", () => outputImgInput.click());
+    outputImgInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          attachedImageData = event.target.result;
+          imagePreview.innerHTML = `<img src="${attachedImageData}" alt="Screenshot">`;
+          imagePreview.classList.remove("hidden");
+          updateLivePreview();
+        };
+        reader.readAsDataURL(file);
       }
-      updateLivePreview();
     });
   }
-
-  // --- FILL SAMPLE DATA ---
-  btnSampleData.addEventListener("click", () => {
-    const subKey = (expSubjectSelect && expSubjectSelect.value) || "python";
-    const preset = SUBJECT_PRESETS[subKey] || SUBJECT_PRESETS.python;
-    const sample = preset.sample || SUBJECT_PRESETS.python.sample;
-
-    expNumberInput.value = sample.num;
-    expDateInput.value = "23-09-2026";
-    expTitleInput.value = sample.title;
-    expSubtitleInput.value = sample.sub || "";
-    if (expProcHeadingInput) expProcHeadingInput.value = preset.proc;
-    if (expCodeHeadingInput) expCodeHeadingInput.value = preset.code;
-    expAimInput.value = sample.aim;
-    expAlgoInput.value = sample.algo;
-    expCodeInput.value = sample.code;
-    expOutputInput.value = sample.output;
-    expResultInput.value = sample.result;
-    updateLivePreview();
-  });
 
   // --- VIEW MODE TOGGLE & PREVIEW CONTROLS ---
   viewModeBtns.forEach(btn => {
@@ -588,361 +386,348 @@ searchInput.addEventListener("input", (e) => {
   }
 
   // --- LIVE PREVIEW UPDATES ---
-  const allInputs = [
-    expNumberInput, expDateInput, expTitleInput, expSubtitleInput,
-    studentNameInput, registerNumberInput, expAimInput, expAlgoInput,
-    expCodeInput, expOutputInput, expResultInput,
-    expProcHeadingInput, expCodeHeadingInput
-  ];
-
-  allInputs.forEach(input => {
-    if (input) {
-      input.addEventListener("input", () => {
-        input.classList.remove("has-error");
-        if (inlineStatusBanner && inlineStatusBanner.classList.contains("status-error")) {
-          inlineStatusBanner.classList.add("hidden");
-        }
-        updateLivePreview();
-      });
-    }
-  });
-
   function updateLivePreview() {
-    prevExNo.textContent = expNumberInput.value || "1.D";
-    prevDate.textContent = expDateInput.value || "23-09-2026";
-    prevTitle.textContent = (expTitleInput.value || "COMPREHENSION").toUpperCase();
-    prevSubtitle.textContent = (expSubtitleInput.value || "").toUpperCase();
-
-    // Dynamic Section Headings
-    const pHeading = (expProcHeadingInput && expProcHeadingInput.value.trim()) || "ALGORITHM";
-    const cHeading = (expCodeHeadingInput && expCodeHeadingInput.value.trim()) || "CODING";
-    if (lblProcHeading) lblProcHeading.textContent = pHeading;
-    if (lblCodeHeading) lblCodeHeading.textContent = cHeading;
-    if (prevProcHeading) prevProcHeading.textContent = pHeading;
-    if (prevCodeHeading) prevCodeHeading.textContent = cHeading;
+    if (prevExNo) prevExNo.textContent = expNumberInput.value || "1.D";
+    if (prevDate) prevDate.textContent = expDateInput.value || "23-09-2026";
+    if (prevTitle) prevTitle.textContent = (expTitleInput.value || "COMPREHENSION").toUpperCase();
+    if (prevSubtitle) prevSubtitle.textContent = (expSubtitleInput.value || "").toUpperCase();
 
     const sName = studentNameInput.value || "ADARSH MENON";
     const rNum = registerNumberInput.value || "714025247005";
-    previewFootLeft1.textContent = sName;
-    previewFootRight1.textContent = rNum;
-    previewFootLeft2.textContent = sName;
-    previewFootRight2.textContent = rNum;
+    if (previewFootLeft1) previewFootLeft1.textContent = sName;
+    if (previewFootRight1) previewFootRight1.textContent = rNum;
+    if (previewFootLeft2) previewFootLeft2.textContent = sName;
+    if (previewFootRight2) previewFootRight2.textContent = rNum;
 
-    prevAim.textContent = expAimInput.value || "Enter aim of the experiment...";
+    if (prevAim) prevAim.textContent = expAimInput.value || "Enter aim of the experiment...";
 
     // Algorithm list
-    const algoLines = (expAlgoInput.value || "").split("\n").filter(l => l.trim().length > 0);
-    prevAlgo.innerHTML = "";
-    if (algoLines.length > 0) {
-      algoLines.forEach(l => {
-        const li = document.createElement("li");
-        li.textContent = l.replace(/^[0-9]+[.)-]\s*/, "");
-        prevAlgo.appendChild(li);
-      });
-    } else {
-      prevAlgo.innerHTML = "<li>Define function...</li><li>Display result.</li>";
+    if (prevAlgo) {
+      const algoLines = (expAlgoInput.value || "").split("\n").filter(l => l.trim().length > 0);
+      prevAlgo.innerHTML = "";
+      if (algoLines.length > 0) {
+        algoLines.forEach(l => {
+          const li = document.createElement("li");
+          li.textContent = l.replace(/^[0-9]+[.)-]\s*/, "");
+          prevAlgo.appendChild(li);
+        });
+      } else {
+        prevAlgo.innerHTML = "<li>Define function...</li><li>Display result.</li>";
+      }
     }
 
     // Code
-    prevCode.textContent = expCodeInput.value || "def main():\n    pass";
+    if (prevCode) prevCode.textContent = expCodeInput.value || "def main():\n    pass";
 
     // Output
-    previewOutputBody.textContent = expOutputInput.value || "Execution output...";
+    if (previewOutputBody) previewOutputBody.textContent = expOutputInput.value || "Execution output...";
 
     // Output Image Preview
-    previewOutputImgContainer.innerHTML = "";
-    if (attachedImageData) {
-      const img = document.createElement("img");
-      img.src = attachedImageData;
-      img.style.maxWidth = "100%";
-      img.style.marginTop = "8px";
-      img.style.borderRadius = "4px";
-      previewOutputImgContainer.appendChild(img);
+    if (previewOutputImgContainer) {
+      previewOutputImgContainer.innerHTML = "";
+      if (attachedImageData) {
+        const img = document.createElement("img");
+        img.src = attachedImageData;
+        img.style.maxWidth = "100%";
+        img.style.marginTop = "0.75rem";
+        img.style.border = "1px solid #cbd5e1";
+        img.style.borderRadius = "4px";
+        previewOutputImgContainer.appendChild(img);
+      }
     }
 
     // Result
-    prevResult.textContent = expResultInput.value || "The experiment was conducted successfully.";
+    if (prevResult) prevResult.textContent = expResultInput.value || "Enter experiment result...";
   }
 
-  // --- AI ASSIST BUTTONS ---
-  document.getElementById("btn-ai-algo").addEventListener("click", () => triggerAiAssist("algorithm", "format"));
-  document.getElementById("btn-ai-code").addEventListener("click", () => triggerAiAssist("coding", "indentation"));
-  document.getElementById("btn-ai-aim").addEventListener("click", () => triggerAiAssist("aim", "spellcheck"));
-  document.getElementById("btn-ai-result").addEventListener("click", () => triggerAiAssist("result", "spellcheck"));
+  // --- AI ASSIST SYSTEM ---
+  const aiAimBtn = document.getElementById("btn-ai-aim");
+  const aiAlgoBtn = document.getElementById("btn-ai-algo");
+  const aiCodeBtn = document.getElementById("btn-ai-code");
+  const aiResultBtn = document.getElementById("btn-ai-result");
 
-  async function triggerAiAssist(field, mode) {
-    activeAiTargetField = field;
-    let content = "";
-    if (field === "algorithm") content = expAlgoInput.value;
-    else if (field === "coding") content = expCodeInput.value;
-    else if (field === "aim") content = expAimInput.value;
-    else if (field === "result") content = expResultInput.value;
+  if (aiAimBtn) aiAimBtn.addEventListener("click", () => triggerAiAssist("aim", "spell_grammar"));
+  if (aiAlgoBtn) aiAlgoBtn.addEventListener("click", () => triggerAiAssist("algorithm", "format_steps"));
+  if (aiCodeBtn) aiCodeBtn.addEventListener("click", () => triggerAiAssist("coding", "indent_code"));
+  if (aiResultBtn) aiResultBtn.addEventListener("click", () => triggerAiAssist("result", "spell_grammar"));
 
-    if (!content.trim()) {
-      alert("Please enter content before running assistant.");
+  async function triggerAiAssist(fieldName, action) {
+    let rawText = "";
+    if (fieldName === "aim") rawText = expAimInput.value;
+    else if (fieldName === "algorithm") rawText = expAlgoInput.value;
+    else if (fieldName === "coding") rawText = expCodeInput.value;
+    else if (fieldName === "result") rawText = expResultInput.value;
+
+    if (!rawText.trim()) {
+      showStatus("error", `Please enter some text in ${fieldName.toUpperCase()} before requesting AI formatting.`);
       return;
     }
 
     try {
+      showStatus("loading", `Applying AI formatting to ${fieldName.toUpperCase()}...`);
       const res = await fetch(API_BASE + "/api/ai/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ field, content, mode })
+        body: JSON.stringify({
+          field_name: fieldName,
+          raw_text: rawText,
+          action: action
+        })
       });
+
       const data = await res.json();
-      if (data.suggestions && data.suggestions.length > 0) {
-        activeAiSuggestion = data.suggestions[0];
-        modalRationale.textContent = activeAiSuggestion.rationale;
-        diffOriginal.textContent = activeAiSuggestion.original;
-        diffSuggested.textContent = activeAiSuggestion.suggested;
+      if (data.success) {
+        activeAiTargetField = fieldName;
+        activeAiSuggestion = data.suggested_text;
+
+        modalRationale.textContent = data.rationale || "AI optimization suggestions.";
+        diffOriginal.textContent = rawText;
+        diffSuggested.textContent = data.suggested_text;
         aiModal.classList.remove("hidden");
+        if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
       } else {
-        alert(data.message || "No improvements needed! Content is clean.");
+        showStatus("error", "AI formatting could not be completed.");
       }
     } catch (e) {
-      alert("AI Assistant error: " + e.message);
+      showStatus("error", "AI service connection error: " + e.message);
     }
   }
 
-  btnCloseModal.addEventListener("click", () => aiModal.classList.add("hidden"));
-  btnRejectAi.addEventListener("click", () => aiModal.classList.add("hidden"));
-  btnAcceptAi.addEventListener("click", () => {
-    if (activeAiSuggestion && activeAiTargetField) {
-      if (activeAiTargetField === "algorithm") expAlgoInput.value = activeAiSuggestion.suggested;
-      else if (activeAiTargetField === "coding") expCodeInput.value = activeAiSuggestion.suggested;
-      else if (activeAiTargetField === "aim") expAimInput.value = activeAiSuggestion.suggested;
-      else if (activeAiTargetField === "result") expResultInput.value = activeAiSuggestion.suggested;
+  if (btnCloseModal) btnCloseModal.addEventListener("click", () => aiModal.classList.add("hidden"));
+  if (btnRejectAi) btnRejectAi.addEventListener("click", () => aiModal.classList.add("hidden"));
 
-      updateLivePreview();
-      aiModal.classList.add("hidden");
-    }
-  });
-
-  // --- RAW NOTES IMPORT MODAL ---
-  btnImportNotes.addEventListener("click", () => importModal.classList.remove("hidden"));
-  btnCloseImport.addEventListener("click", () => importModal.classList.add("hidden"));
-  btnCancelImport.addEventListener("click", () => importModal.classList.add("hidden"));
-  btnApplyImport.addEventListener("click", async () => {
-    const raw = importRawText.value.trim();
-    if (!raw) return;
-
-    try {
-      const res = await fetch(API_BASE + "/api/experiment/parse-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: raw })
-      });
-      const data = await res.json();
-      if (data.success && data.data) {
-        const d = data.data;
-        if (d.experiment_number) expNumberInput.value = d.experiment_number;
-        if (d.title) expTitleInput.value = d.title;
-        if (d.subtitle) expSubtitleInput.value = d.subtitle;
-        if (d.date) expDateInput.value = d.date;
-        if (d.aim) expAimInput.value = d.aim;
-        if (d.algorithm) expAlgoInput.value = d.algorithm;
-        if (d.coding) expCodeInput.value = d.coding;
-        if (d.output) expOutputInput.value = d.output;
-        if (d.result) expResultInput.value = d.result;
+  if (btnAcceptAi) {
+    btnAcceptAi.addEventListener("click", () => {
+      if (activeAiTargetField && activeAiSuggestion !== null) {
+        if (activeAiTargetField === "aim") expAimInput.value = activeAiSuggestion;
+        else if (activeAiTargetField === "algorithm") expAlgoInput.value = activeAiSuggestion;
+        else if (activeAiTargetField === "coding") expCodeInput.value = activeAiSuggestion;
+        else if (activeAiTargetField === "result") expResultInput.value = activeAiSuggestion;
 
         updateLivePreview();
-        importModal.classList.add("hidden");
+        aiModal.classList.add("hidden");
+        showStatus("success", `AI formatting successfully applied to ${activeAiTargetField.toUpperCase()}.`);
       }
-    } catch (e) {
-      alert("Failed to parse notes: " + e.message);
-    }
-  });
+    });
+  }
 
-  // Helper to display status banner
-  function showStatus(type, message, htmlContent = null) {
-    if (!inlineStatusBanner) return;
-    inlineStatusBanner.className = `inline-status-banner status-${type}`;
-    if (htmlContent) {
-      inlineStatusBanner.innerHTML = htmlContent;
-    } else {
-      inlineStatusBanner.textContent = message;
-    }
-    inlineStatusBanner.classList.remove("hidden");
+  // --- RAW NOTES IMPORT MODAL ---
+  if (btnImportNotes) {
+    btnImportNotes.addEventListener("click", () => {
+      importModal.classList.remove("hidden");
+      importRawText.focus();
+    });
+  }
+
+  if (btnCloseImport) btnCloseImport.addEventListener("click", () => importModal.classList.add("hidden"));
+  if (btnCancelImport) btnCancelImport.addEventListener("click", () => importModal.classList.add("hidden"));
+
+  if (btnApplyImport) {
+    btnApplyImport.addEventListener("click", async () => {
+      const text = importRawText.value.trim();
+      if (!text) {
+        showStatus("error", "Please paste raw experiment text to parse.");
+        return;
+      }
+
+      try {
+        const res = await fetch(API_BASE + "/api/experiment/parse-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+          const d = data.data;
+          if (d.experiment_number) expNumberInput.value = d.experiment_number;
+          if (d.title) expTitleInput.value = d.title;
+          if (d.subtitle) expSubtitleInput.value = d.subtitle;
+          if (d.date) expDateInput.value = d.date;
+          if (d.aim) expAimInput.value = d.aim;
+          if (d.algorithm) expAlgoInput.value = d.algorithm;
+          if (d.coding) expCodeInput.value = d.coding;
+          if (d.output) expOutputInput.value = d.output;
+          if (d.result) expResultInput.value = d.result;
+
+          updateLivePreview();
+          importModal.classList.add("hidden");
+          showStatus("success", "Raw notes successfully parsed and populated into the form.");
+        }
+      } catch (e) {
+        showStatus("error", "Failed to parse notes: " + e.message);
+      }
+    });
   }
 
   // --- PREVIEW BUTTON LISTENER ---
   if (btnPreview) {
     btnPreview.addEventListener("click", () => {
-      const previewCol = document.querySelector(".preview-column") || document.getElementById("book-spread");
+      const previewCol = document.querySelector(".preview-column") || document.getElementById("book-spread-container");
       if (previewCol) {
         previewCol.scrollIntoView({ behavior: "smooth" });
       }
       updateLivePreview();
-      showStatus("info", "Preview updated to match current form inputs.");
+      showStatus("success", "Preview updated with current form values.");
     });
   }
 
   // --- GENERATE DOCX ---
-  btnGenerate.addEventListener("click", async () => {
-    // Clear any previous error styling
-    allInputs.forEach(i => { if (i) i.classList.remove("has-error"); });
-    if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
+  if (btnGenerate) {
+    btnGenerate.addEventListener("click", async () => {
+      allInputs.forEach(i => { if (i) i.classList.remove("has-error"); });
+      if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
 
-    const expData = {
-      experiment_number: expNumberInput.value.trim(),
-      title: expTitleInput.value.trim(),
-      subtitle: expSubtitleInput.value.trim(),
-      date: expDateInput.value.trim(),
-      subject: (expSubjectSelect && expSubjectSelect.value) || "python",
-      procedure_heading: (expProcHeadingInput && expProcHeadingInput.value.trim()) || "ALGORITHM",
-      code_heading: (expCodeHeadingInput && expCodeHeadingInput.value.trim()) || "CODING",
-      aim: expAimInput.value.trim(),
-      algorithm: expAlgoInput.value.trim(),
-      coding: expCodeInput.value,
-      output: expOutputInput.value,
-      output_images: attachedImageData ? [attachedImageData] : [],
-      result: expResultInput.value.trim(),
-      student_name: studentNameInput.value.trim(),
-      register_number: registerNumberInput.value.trim()
-    };
-
-    // Validation: Check required fields with visual feedback
-    const missing = [];
-    if (!expData.experiment_number) { missing.push("Experiment No"); expNumberInput.classList.add("has-error"); }
-    if (!expData.title) { missing.push("Title"); expTitleInput.classList.add("has-error"); }
-    if (!expData.aim) { missing.push("Aim"); expAimInput.classList.add("has-error"); }
-    if (!expData.coding) { missing.push("Coding / Implementation"); expCodeInput.classList.add("has-error"); }
-    if (!expData.result) { missing.push("Result"); expResultInput.classList.add("has-error"); }
-
-    if (missing.length > 0) {
-      showStatus(
-        "error",
-        "",
-        `<strong>Missing required fields (${missing.join(", ")}):</strong> Please fill highlighted inputs or <button type="button" id="btn-quick-fill-sample" style="background:#b91c1c;color:#fff;border:1px solid #f87171;padding:3px 10px;border-radius:4px;cursor:pointer;margin-left:6px;font-weight:600;font-size:0.8rem;">Auto-fill Sample Experiment</button>`
-      );
-      const firstError = document.querySelector(".has-error");
-      if (firstError) {
-        firstError.focus();
-        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-      const quickFillBtn = document.getElementById("btn-quick-fill-sample");
-      if (quickFillBtn) {
-        quickFillBtn.addEventListener("click", () => {
-          btnSampleData.click();
-          if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
-        });
-      }
-      return;
-    }
-
-    btnGenerate.disabled = true;
-    btnGenerate.innerHTML = "<span class=\"spinner\"></span> ⚡ Compiling Print-Ready DOCX...";
-    showStatus("loading", "⚡ Generating print-ready DOCX with exact laboratory template styling... Please wait...");
-
-    try {
-      let endpoint = `${API_BASE}/api/experiment/generate`;
-      let payload = {
-        experiment: expData,
-        template_id: selectTemplate.value
+      // Gather form data with safe fallbacks
+      const expData = {
+        experiment_number: (expNumberInput.value.trim()) || "1.D",
+        title: (expTitleInput.value.trim()) || "LAB EXPERIMENT",
+        subtitle: (expSubtitleInput.value.trim()) || "",
+        date: (expDateInput.value.trim()) || "23-09-2026",
+        subject: "standard",
+        procedure_heading: "ALGORITHM",
+        code_heading: "CODING",
+        aim: (expAimInput.value.trim()) || "To execute and verify the laboratory experiment.",
+        algorithm: (expAlgoInput.value.trim()) || "1. Start\n2. Execute program\n3. Stop",
+        coding: expCodeInput.value || "def main():\n    pass",
+        output: expOutputInput.value || "Program execution output...",
+        output_images: attachedImageData ? [attachedImageData] : [],
+        result: (expResultInput.value.trim()) || "The program was executed and verified successfully.",
+        student_name: (studentNameInput.value.trim()) || "ADARSH MENON",
+        register_number: (registerNumberInput.value.trim()) || "714025247005"
       };
 
-      if (currentMode === "continue") {
-        if (uploadedRecordFileId) {
+      // Check required fields
+      const missing = [];
+      if (!expNumberInput.value.trim()) { missing.push("Experiment No"); expNumberInput.classList.add("has-error"); }
+      if (!expTitleInput.value.trim()) { missing.push("Title"); expTitleInput.classList.add("has-error"); }
+      if (!expAimInput.value.trim()) { missing.push("Aim"); expAimInput.classList.add("has-error"); }
+      if (!expCodeInput.value.trim()) { missing.push("Coding"); expCodeInput.classList.add("has-error"); }
+      if (!expResultInput.value.trim()) { missing.push("Result"); expResultInput.classList.add("has-error"); }
+
+      if (missing.length > 0) {
+        showStatus(
+          "error",
+          "",
+          `<strong>Please fill missing required fields (${missing.join(", ")}):</strong> or <button type="button" id="btn-quick-fill-sample" style="background:#b91c1c;color:#fff;border:1px solid #f87171;padding:3px 10px;border-radius:4px;cursor:pointer;margin-left:6px;font-weight:600;font-size:0.8rem;">Auto-fill Sample Experiment</button>`
+        );
+        const firstErr = document.querySelector(".has-error");
+        if (firstErr) {
+          firstErr.focus();
+          firstErr.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        const qBtn = document.getElementById("btn-quick-fill-sample");
+        if (qBtn) qBtn.addEventListener("click", () => fillExperimentForm());
+        return;
+      }
+
+      btnGenerate.disabled = true;
+      btnGenerate.innerHTML = '<span class="spinner"></span> ⚡ Compiling DOCX...';
+      showStatus("loading", "⚡ Compiling print-ready laboratory record DOCX... Please wait...");
+
+      try {
+        let endpoint = `${API_BASE}/api/experiment/generate`;
+        let payload = {
+          experiment: expData,
+          template_id: "python_lab_reference"
+        };
+
+        if (currentMode === "continue" && uploadedRecordFileId) {
           endpoint = `${API_BASE}/api/record/continue`;
           payload = {
             original_filename: uploadedRecordFileId,
             experiment: expData,
-            template_id: selectTemplate.value,
+            template_id: "python_lab_reference",
             preserve_original: true
           };
+        }
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const result = await res.json();
+        if (result.success && result.download_url) {
+          const fullDownloadUrl = result.download_url.startsWith("http")
+            ? result.download_url
+            : `${API_BASE}${result.download_url}`;
+
+          // Top Banner
+          generationBanner.classList.remove("hidden");
+          btnDownloadFile.href = fullDownloadUrl;
+          btnDownloadFile.setAttribute("download", result.filename);
+          const bTitle = document.getElementById("banner-title");
+          const bDesc = document.getElementById("banner-desc");
+          if (bTitle) bTitle.textContent = `Document Ready (${result.filename})`;
+          if (bDesc) bDesc.textContent = result.message || "Your laboratory record has been successfully compiled.";
+
+          // Inline Banner with Direct Download Button
+          showStatus(
+            "success",
+            "",
+            `<span>✅ <strong>Success!</strong> ${result.filename} generated successfully.</span> <a href="${fullDownloadUrl}" download="${result.filename}" style="background:#16a34a;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-weight:600;display:inline-block;margin-left:10px;">📥 Download DOCX</a>`
+          );
+
+          // Auto-trigger browser download
+          try {
+            const dlLink = document.createElement("a");
+            dlLink.href = fullDownloadUrl;
+            dlLink.download = result.filename;
+            document.body.appendChild(dlLink);
+            dlLink.click();
+            setTimeout(() => dlLink.remove(), 1000);
+          } catch (dlErr) {
+            console.warn("Auto-download bypassed:", dlErr);
+          }
+
+          inlineStatusBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
         } else {
-          // If in continue mode but no file was uploaded, seamlessly generate a fresh record without blocking!
-          showStatus("loading", "⚡ Generating clean laboratory record document...");
+          const errMsg = (result.warnings && result.warnings.length)
+            ? result.warnings.join(", ")
+            : (result.error || "Generation could not be completed.");
+          showStatus("error", `Generation failed: ${errMsg}`);
         }
+      } catch (e) {
+        console.error("Generate error:", e);
+        showStatus("error", `Failed to generate document: ${e.message}. Please check connection.`);
+      } finally {
+        btnGenerate.disabled = false;
+        btnGenerate.innerHTML = "⚡ Generate DOCX";
       }
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        throw new Error(`Server responded with status ${res.status} (${res.statusText})`);
-      }
-
-      const result = await res.json();
-      if (result.success && result.download_url) {
-        const fullDownloadUrl = result.download_url.startsWith("http")
-          ? result.download_url
-          : `${API_BASE}${result.download_url}`;
-
-        // Update Top Banner
-        generationBanner.classList.remove("hidden");
-        btnDownloadFile.href = fullDownloadUrl;
-        btnDownloadFile.setAttribute("download", result.filename);
-        const bTitle = document.getElementById("banner-title");
-        const bDesc = document.getElementById("banner-desc");
-        if (bTitle) bTitle.textContent = `Document Ready (${result.filename})`;
-        if (bDesc) bDesc.textContent = result.message || "Your laboratory record has been successfully compiled.";
-
-        // Update Inline Status Banner with Direct Download Button
-        showStatus(
-          "success",
-          "",
-          `<span>✅ <strong>Success!</strong> ${result.filename} generated successfully.</span> <a href="${fullDownloadUrl}" download="${result.filename}" style="background:#16a34a;color:#fff;padding:5px 12px;border-radius:4px;text-decoration:none;font-weight:600;display:inline-block;margin-left:10px;">📥 Download DOCX</a>`
-        );
-
-        // Auto-trigger direct browser download
-        try {
-          const dlLink = document.createElement("a");
-          dlLink.href = fullDownloadUrl;
-          dlLink.download = result.filename;
-          document.body.appendChild(dlLink);
-          dlLink.click();
-          dlLink.remove();
-        } catch (dlErr) {
-          console.warn("Direct download auto-trigger bypassed:", dlErr);
-        }
-
-        inlineStatusBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      } else {
-        const errMsg = (result.warnings && result.warnings.length)
-          ? result.warnings.join(", ")
-          : (result.error || "Generation could not be completed.");
-        showStatus("error", `Generation failed: ${errMsg}`);
-      }
-    } catch (e) {
-      console.error("DOCX Generation error:", e);
-      showStatus("error", `Failed to generate document: ${e.message}. Please check if backend is reachable.`);
-    } finally {
-      btnGenerate.disabled = false;
-      btnGenerate.innerHTML = "⚡ Generate DOCX";
-    }
-  });
+    });
+  }
 
   // --- DRAFTS SYSTEM ---
-  btnSaveDraft.addEventListener("click", () => {
-    const draft = {
-      id: "draft_" + Date.now(),
-      experiment_number: expNumberInput.value || "Untitled",
-      title: expTitleInput.value || "Draft Experiment",
-      subtitle: expSubtitleInput.value,
-      date: expDateInput.value,
-      subject: (expSubjectSelect && expSubjectSelect.value) || "python",
-      procedure_heading: (expProcHeadingInput && expProcHeadingInput.value) || "ALGORITHM",
-      code_heading: (expCodeHeadingInput && expCodeHeadingInput.value) || "CODING",
-      aim: expAimInput.value,
-      algorithm: expAlgoInput.value,
-      coding: expCodeInput.value,
-      output: expOutputInput.value,
-      result: expResultInput.value,
-      student_name: studentNameInput.value,
-      register_number: registerNumberInput.value,
-      timestamp: new Date().toLocaleTimeString()
-    };
+  if (btnSaveDraft) {
+    btnSaveDraft.addEventListener("click", () => {
+      const draft = {
+        id: "draft_" + Date.now(),
+        experiment_number: expNumberInput.value || "Untitled",
+        title: expTitleInput.value || "Draft Experiment",
+        subtitle: expSubtitleInput.value,
+        date: expDateInput.value,
+        aim: expAimInput.value,
+        algorithm: expAlgoInput.value,
+        coding: expCodeInput.value,
+        output: expOutputInput.value,
+        result: expResultInput.value,
+        student_name: studentNameInput.value,
+        register_number: registerNumberInput.value,
+        timestamp: new Date().toLocaleTimeString()
+      };
 
-    let drafts = JSON.parse(localStorage.getItem("lab_record_drafts") || "[]");
-    drafts.unshift(draft);
-    localStorage.setItem("lab_record_drafts", JSON.stringify(drafts));
-    loadDrafts();
-    alert("Draft saved successfully!");
-  });
+      let drafts = JSON.parse(localStorage.getItem("lab_record_drafts") || "[]");
+      drafts.unshift(draft);
+      localStorage.setItem("lab_record_drafts", JSON.stringify(drafts));
+      loadDrafts();
+      showStatus("success", `Draft "${draft.title}" saved successfully.`);
+    });
+  }
 
   function loadDrafts() {
     const drafts = JSON.parse(localStorage.getItem("lab_record_drafts") || "[]");
@@ -970,7 +755,7 @@ searchInput.addEventListener("input", (e) => {
       item.innerHTML = `
         <div>
           <strong>Exp ${d.experiment_number}: ${d.title}</strong>
-          <div style="font-size:0.75rem;color:#64748b;">[${(d.subject || 'python').toUpperCase()}] Saved at ${d.timestamp}</div>
+          <div style="font-size:0.75rem;color:#64748b;">Saved at ${d.timestamp}</div>
         </div>
         <div style="display:flex;gap:0.5rem;">
           <button class="btn btn-secondary btn-xs" onclick="window.loadDraftByIndex(${idx})">Load</button>
@@ -985,25 +770,10 @@ searchInput.addEventListener("input", (e) => {
     const drafts = JSON.parse(localStorage.getItem("lab_record_drafts") || "[]");
     const d = drafts[idx];
     if (d) {
-      expNumberInput.value = d.experiment_number;
-      expTitleInput.value = d.title;
-      expSubtitleInput.value = d.subtitle || "";
-      expDateInput.value = d.date || "";
-      if (d.subject && expSubjectSelect) expSubjectSelect.value = d.subject;
-      if (d.procedure_heading && expProcHeadingInput) expProcHeadingInput.value = d.procedure_heading;
-      if (d.code_heading && expCodeHeadingInput) expCodeHeadingInput.value = d.code_heading;
-      expAimInput.value = d.aim || "";
-      expAlgoInput.value = d.algorithm || "";
-      expCodeInput.value = d.coding || "";
-      expOutputInput.value = d.output || "";
-      expResultInput.value = d.result || "";
-      if (d.student_name) studentNameInput.value = d.student_name;
-      if (d.register_number) registerNumberInput.value = d.register_number;
-
-      updateLivePreview();
-      // Switch to experiment tab
-      tabBtns[0].click();
-      alert(`Loaded draft: Exp ${d.experiment_number}`);
+      fillExperimentForm(d);
+      // Switch back to create tab
+      if (tabBtns[0]) tabBtns[0].click();
+      showStatus("success", `Loaded draft: Exp ${d.experiment_number}`);
     }
   };
 
@@ -1013,4 +783,8 @@ searchInput.addEventListener("input", (e) => {
     localStorage.setItem("lab_record_drafts", JSON.stringify(drafts));
     loadDrafts();
   };
+
+  // --- INITIALIZE ON PAGE LOAD ---
+  fillExperimentForm(DEFAULT_EXPERIMENT);
+  loadDrafts();
 });

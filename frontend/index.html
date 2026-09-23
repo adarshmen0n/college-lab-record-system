@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Times+New+Roman&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4.0">
 </head>
 <body>
   <!-- Header Bar -->
@@ -17,12 +17,12 @@
         <div class="brand-icon">📚</div>
         <div>
           <h1>RECORDEXT</h1>
-          <p class="tagline">Enterprise College Laboratory Record Automation System • Multi-Subject Support • Facing-Pages Layout • Pixel-Perfect DOCX</p>
+          <p class="tagline">College Laboratory Record Automation System • Standard Duplex Facing Pages • Pixel-Perfect DOCX</p>
         </div>
       </div>
       <div class="header-badges">
         <span class="badge badge-success" id="backend-status">● Engine Online</span>
-        <button class="btn btn-secondary btn-sm" id="btn-import-notes">📥 Import Raw Notes</button>
+        <button class="btn btn-secondary btn-sm" id="btn-import-notes" type="button">📥 Import Raw Notes</button>
       </div>
     </div>
   </header>
@@ -31,30 +31,38 @@
   <main class="main-container">
     <!-- Navigation Tabs -->
     <nav class="nav-tabs">
-      <button class="tab-btn active" data-tab="tab-continue">
-        <span class="tab-icon">🔄</span> Continue Existing Record
-        <span class="tab-pill">Most Popular</span>
+      <button class="tab-btn active" data-tab="tab-create" type="button">
+        <span class="tab-icon">✨</span> Create Lab Record
       </button>
-      <button class="tab-btn" data-tab="tab-new">
-        <span class="tab-icon">✨</span> Create New Record
+      <button class="tab-btn" data-tab="tab-continue" type="button">
+        <span class="tab-icon">🔄</span> Append to Existing Record (.docx)
       </button>
-      <button class="tab-btn" data-tab="tab-templates">
-        <span class="tab-icon">📐</span> Templates & Calibration
-      </button>
-      <button class="tab-btn" data-tab="tab-drafts">
+      <button class="tab-btn" data-tab="tab-drafts" type="button">
         <span class="tab-icon">💾</span> Drafts (<span id="draft-count">0</span>)
       </button>
     </nav>
+
+    <!-- Top Generation Result Notification Banner -->
+    <div class="banner banner-success hidden" id="generation-banner">
+      <div class="banner-icon">🎉</div>
+      <div class="banner-body">
+        <h3 id="banner-title">Document Ready</h3>
+        <p id="banner-desc">Your print-ready laboratory record has been successfully compiled.</p>
+        <div class="banner-actions">
+          <a class="btn btn-primary" id="btn-download-file" href="#" download>📥 Download DOCX</a>
+        </div>
+      </div>
+    </div>
 
     <!-- Content Workspace -->
     <div class="workspace-grid">
       <!-- Left Column: Form / Steps -->
       <section class="form-column">
-        <!-- MODE B: CONTINUE EXISTING RECORD TAB -->
-        <div class="tab-content active" id="tab-continue">
+        <!-- MODE: APPEND TO EXISTING RECORD TAB -->
+        <div class="tab-content hidden" id="tab-continue">
           <div class="card card-primary">
             <div class="card-header">
-              <h2>1. Upload Existing Record (.docx)</h2>
+              <h2>Upload Existing Record (.docx)</h2>
               <span class="pill pill-safe">Original File Protected (Read-Only)</span>
             </div>
             <div class="card-body">
@@ -63,7 +71,7 @@
                 <div class="dropzone-content">
                   <div class="dropzone-icon">📂</div>
                   <h3>Drop your existing lab record here, or <span class="browse-link">browse</span></h3>
-                  <p class="dropzone-hint">Uploads your completed/ongoing record (e.g., Experiments 1.A–1.C or 1–23)</p>
+                  <p class="dropzone-hint">Uploads your ongoing record to append the next experiment seamlessly</p>
                 </div>
               </div>
 
@@ -90,80 +98,30 @@
                   </div>
                 </div>
                 <div class="notice notice-info">
-                  <strong>Non-destructive continuation:</strong> New experiment will be appended to a copy named <code>Lab_Record_Updated.docx</code>.
+                  <strong>Non-destructive continuation:</strong> The new experiment will be appended to a new copy named <code>Lab_Record_Updated.docx</code>.
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- MODE A: CREATE NEW RECORD TAB -->
-        <div class="tab-content" id="tab-new">
-          <div class="card">
-            <div class="card-header">
-              <h2>1. Select College Template</h2>
-            </div>
-            <div class="card-body">
-              <div class="form-group">
-                <label for="select-template">Template Format</label>
-                <select id="select-template" class="form-control">
-                  <!-- Populated from backend -->
-                </select>
-              </div>
-              <div class="template-summary-badge" id="selected-template-info">
-                <span>📐 A4 (0.75" Margins)</span>
-                <span>🔲 Page Border Active</span>
-                <span>📊 Master Evaluation Table Ready</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- EXPERIMENT FORM (Shared across both modes) -->
-        <div class="card card-experiment">
+        <!-- EXPERIMENT FORM (Shared across modes) -->
+        <div class="card card-experiment" id="experiment-form-card">
           <div class="card-header">
-            <h2>2. Enter Experiment Information</h2>
+            <h2>Laboratory Experiment Details</h2>
             <div class="card-actions">
-              <button class="btn btn-secondary btn-xs" id="btn-sample-data">Fill Sample (Exp 1.D)</button>
-              <button class="btn btn-secondary btn-xs" id="btn-save-draft">Save Draft</button>
+              <button class="btn btn-secondary btn-xs" id="btn-sample-data" type="button">Reset Sample (Exp 1.D)</button>
+              <button class="btn btn-secondary btn-xs" id="btn-clear-form" type="button">Clear Form</button>
+              <button class="btn btn-secondary btn-xs" id="btn-save-draft" type="button">Save Draft</button>
             </div>
           </div>
           <div class="card-body">
-            <!-- Subject Selection & Dynamic Headings -->
-            <div class="form-row">
-              <div class="form-group col-12">
-                <label for="exp-subject">Laboratory Subject / Domain</label>
-                <select id="exp-subject" class="form-control highlight-input">
-                  <option value="python" selected>🐍 Python / AI & Machine Learning Laboratory</option>
-                  <option value="java">☕ Java Programming Laboratory</option>
-                  <option value="cpp">⚡ C / C++ Data Structures & Algorithms</option>
-                  <option value="dbms">🗄️ DBMS / SQL Relational Database Laboratory</option>
-                  <option value="linux">🐧 Linux Systems Programming & Shell Scripting</option>
-                  <option value="networks">🌐 Computer Networks Laboratory</option>
-                  <option value="web">💻 Web Technologies & Full-Stack Laboratory</option>
-                  <option value="custom">🛠️ Custom Subject / Laboratory</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Dynamic Section Headings -->
-            <div class="form-row">
-              <div class="form-group col-6">
-                <label for="exp-proc-heading">Procedure Section Heading</label>
-                <input type="text" id="exp-proc-heading" class="form-control" value="ALGORITHM" placeholder="e.g. ALGORITHM or PROCEDURE">
-              </div>
-              <div class="form-group col-6">
-                <label for="exp-code-heading">Code Section Heading</label>
-                <input type="text" id="exp-code-heading" class="form-control" value="CODING" placeholder="e.g. CODING, PROGRAM, or SQL QUERIES">
-              </div>
-            </div>
-
             <!-- Row 1: Exp Number & Date -->
             <div class="form-row">
               <div class="form-group col-6">
                 <label for="exp-number">Experiment Number <span class="required">*</span></label>
                 <input type="text" id="exp-number" class="form-control form-control-lg highlight-input" placeholder="e.g. 1.D or 24">
-                <small class="form-hint">Explicit input. No automated skipping or forcing sequential numbers.</small>
+                <small class="form-hint">Explicit input. Custom and non-sequential numbers supported.</small>
               </div>
               <div class="form-group col-6">
                 <label for="exp-date">Date <span class="required">*</span></label>
@@ -199,25 +157,25 @@
             <div class="form-group">
               <div class="label-with-action">
                 <label for="exp-aim">AIM <span class="required">*</span></label>
-                <button class="btn-link-action" id="btn-ai-aim">✨ Spell Check</button>
+                <button class="btn-link-action" id="btn-ai-aim" type="button">✨ Spell Check</button>
               </div>
               <textarea id="exp-aim" class="form-control" rows="3" placeholder="To implement..."></textarea>
             </div>
 
-            <!-- PROCEDURE / ALGORITHM -->
+            <!-- ALGORITHM -->
             <div class="form-group">
               <div class="label-with-action">
-                <label for="exp-algo"><span id="lbl-proc-heading">ALGORITHM</span> <span class="required">*</span></label>
-                <button class="btn-link-action" id="btn-ai-algo">✨ Format Steps</button>
+                <label for="exp-algo">ALGORITHM <span class="required">*</span></label>
+                <button class="btn-link-action" id="btn-ai-algo" type="button">✨ Format Steps</button>
               </div>
               <textarea id="exp-algo" class="form-control font-serif" rows="5" placeholder="1. Start the program&#10;2. Define parameters..."></textarea>
             </div>
 
-            <!-- CODING / PROGRAM -->
+            <!-- CODING -->
             <div class="form-group">
               <div class="label-with-action">
-                <label for="exp-code"><span id="lbl-code-heading">CODING</span> <span class="required">*</span></label>
-                <button class="btn-link-action" id="btn-ai-code">✨ Normalize Indentation (4-Spaces)</button>
+                <label for="exp-code">CODING <span class="required">*</span></label>
+                <button class="btn-link-action" id="btn-ai-code" type="button">✨ Normalize Indentation (4-Spaces)</button>
               </div>
               <textarea id="exp-code" class="form-control code-editor font-serif" rows="9" placeholder="def solution():&#10;    # Write program here with indentation preserved"></textarea>
               <small class="form-hint">Indentation and line breaks are strictly preserved. Rendered in Times New Roman 12 pt in the document.</small>
@@ -227,9 +185,9 @@
             <div class="form-group output-container-card">
               <label>OUTPUT (Placed on Left-Side Facing Page) <span class="required">*</span></label>
               <div class="output-tabs">
-                <button class="output-tab-btn active" data-output="text">Text Output</button>
-                <button class="output-tab-btn" data-output="image">Screenshot Image</button>
-                <button class="output-tab-btn" data-output="both">Text + Screenshot</button>
+                <button class="output-tab-btn active" data-output="text" type="button">Text Output</button>
+                <button class="output-tab-btn" data-output="image" type="button">Screenshot Image</button>
+                <button class="output-tab-btn" data-output="both" type="button">Text + Screenshot</button>
               </div>
 
               <div id="output-text-area">
@@ -249,7 +207,7 @@
             <div class="form-group">
               <div class="label-with-action">
                 <label for="exp-result">RESULT <span class="required">*</span></label>
-                <button class="btn-link-action" id="btn-ai-result">✨ Spell Check</button>
+                <button class="btn-link-action" id="btn-ai-result" type="button">✨ Spell Check</button>
               </div>
               <textarea id="exp-result" class="form-control" rows="3" placeholder="The program was executed and the output was verified successfully."></textarea>
             </div>
@@ -265,24 +223,8 @@
           </div>
         </div>
 
-        <!-- TEMPLATES CATALOG TAB -->
-        <div class="tab-content" id="tab-templates">
-          <div class="card">
-            <div class="card-header">
-              <h2>Saved Templates Library</h2>
-              <button class="btn btn-secondary btn-sm" id="btn-upload-new-tmpl">Upload New Template (.docx)</button>
-              <input type="file" id="input-new-template" accept=".docx" hidden>
-            </div>
-            <div class="card-body">
-              <div class="templates-grid" id="templates-grid">
-                <!-- Injected via app.js -->
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- DRAFTS TAB -->
-        <div class="tab-content" id="tab-drafts">
+        <div class="tab-content hidden" id="tab-drafts">
           <div class="card">
             <div class="card-header">
               <h2>Saved Experiment Drafts</h2>
@@ -306,10 +248,10 @@
             </div>
             <div class="preview-controls">
               <div class="view-mode-toggle" id="view-mode-toggle">
-                <button class="view-btn active" data-view="spread" title="Side-by-Side Facing Pages">📖 Spread</button>
-                <button class="view-btn" data-view="left" title="Left Page (Output)">📄 Left</button>
-                <button class="view-btn" data-view="right" title="Right Page (Exp)">📄 Right</button>
-                <button class="view-btn" data-view="stacked" title="Stacked View">📑 Stacked</button>
+                <button class="view-btn active" data-view="spread" title="Side-by-Side Facing Pages" type="button">📖 Spread</button>
+                <button class="view-btn" data-view="left" title="Left Page (Output)" type="button">📄 Left</button>
+                <button class="view-btn" data-view="right" title="Right Page (Exp)" type="button">📄 Right</button>
+                <button class="view-btn" data-view="stacked" title="Stacked View" type="button">📑 Stacked</button>
               </div>
             </div>
           </div>
@@ -323,12 +265,12 @@
                 <div class="sheet-content" id="preview-left-content">
                   <h4 class="preview-heading">OUTPUT:</h4>
                   <div class="preview-output-text" id="preview-output-body">
-                    Enter number of rows: 2<br>
-                    Enter elements of Matrix-A: ...<br>
-                    Matrix-A: [1, 2, 3]<br>
-                    Matrix-B: [10, 11, 12]<br>
-                    Highest num: 15<br>
-                    Lowest num: 1
+                    Generating squares up to 5:<br>
+                    Square: 0<br>
+                    Square: 1<br>
+                    Square: 4<br>
+                    Square: 9<br>
+                    Square: 16
                   </div>
                   <div id="preview-output-img-container"></div>
                 </div>
@@ -359,14 +301,14 @@
                   <h4 class="preview-heading">AIM:</h4>
                   <p class="preview-text" id="prev-aim">To create a generator using generator comprehension and iterate over elements using functions.</p>
 
-                  <h4 class="preview-heading"><span id="prev-proc-heading">ALGORITHM</span>:</h4>
+                  <h4 class="preview-heading">ALGORITHM:</h4>
                   <ol class="preview-list" id="prev-algo">
                     <li>Define generator function.</li>
                     <li>Yield square numbers.</li>
                     <li>Display results.</li>
                   </ol>
 
-                  <h4 class="preview-heading"><span id="prev-code-heading">CODING</span>:</h4>
+                  <h4 class="preview-heading">CODING:</h4>
                   <pre class="preview-code font-serif" id="prev-code">def gen_squares(n):
     return (x**2 for x in range(n))
 
@@ -378,25 +320,25 @@ for val in gen_squares(5):
                     <table class="preview-eval-table">
                       <tr>
                         <td>PROGRAM AND EXECUTION</td>
-                        <td class="eval-blank"></td>
+                        <td>30</td>
                       </tr>
                       <tr>
-                        <td>CLASS PERFORMANCE</td>
-                        <td class="eval-blank"></td>
+                        <td>VIVA VOCE</td>
+                        <td>10</td>
                       </tr>
                       <tr>
-                        <td>VIVA</td>
-                        <td class="eval-blank"></td>
+                        <td>RECORD MARKS</td>
+                        <td>10</td>
                       </tr>
                       <tr>
                         <td>TOTAL</td>
-                        <td class="eval-blank"></td>
+                        <td>50</td>
+                      </tr>
+                      <tr>
+                        <td class="signature-cell" colspan="2">STAFF SIGNATURE</td>
                       </tr>
                     </table>
                   </div>
-
-                  <h4 class="preview-heading">RESULT:</h4>
-                  <p class="preview-text" id="prev-result">The generator comprehension was implemented successfully.</p>
                 </div>
                 <div class="sheet-footer">
                   <span id="preview-foot-left-2">ADARSH MENON</span>
@@ -405,21 +347,11 @@ for val in gen_squares(5):
               </div>
             </div>
           </div>
-
-          <!-- Download / Status Banner -->
-          <div class="generation-result-banner hidden" id="generation-banner">
-            <div class="banner-icon">🎉</div>
-            <div class="banner-details">
-              <h4 id="banner-title">Document Ready</h4>
-              <p id="banner-desc">Your record has been generated with verified facing layout.</p>
-            </div>
-            <a href="#" class="btn btn-success btn-lg" id="btn-download-file">📥 Download Word Document (.docx)</a>
-          </div>
         </div>
       </section>
     </div>
     <!-- Floating Mobile Preview Button -->
-    <button class="floating-preview-btn" id="btn-floating-preview" aria-label="Jump to Preview">👁 Preview Document</button>
+    <button class="floating-preview-btn" id="btn-floating-preview" aria-label="Jump to Preview" type="button">👁 Preview Document</button>
   </main>
 
   <!-- AI Review Modal -->
@@ -427,7 +359,7 @@ for val in gen_squares(5):
     <div class="modal-dialog">
       <div class="modal-header">
         <h3>✨ Review AI Formatting Suggestion</h3>
-        <button class="modal-close" id="btn-close-modal">&times;</button>
+        <button class="modal-close" id="btn-close-modal" type="button">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-rationale" id="modal-rationale">Normalized algorithm into numbered steps.</p>
@@ -443,8 +375,8 @@ for val in gen_squares(5):
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="btn-reject-ai">Reject Suggestion</button>
-        <button class="btn btn-primary" id="btn-accept-ai">Apply Suggestion</button>
+        <button class="btn btn-secondary" id="btn-reject-ai" type="button">Reject Suggestion</button>
+        <button class="btn btn-primary" id="btn-accept-ai" type="button">Apply Suggestion</button>
       </div>
     </div>
   </div>
@@ -454,19 +386,19 @@ for val in gen_squares(5):
     <div class="modal-dialog">
       <div class="modal-header">
         <h3>📥 Import Raw Notes</h3>
-        <button class="modal-close" id="btn-close-import">&times;</button>
+        <button class="modal-close" id="btn-close-import" type="button">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-hint">Paste your unformatted experiment text below. The parser will detect AIM, ALGORITHM, CODING, OUTPUT, and RESULT.</p>
         <textarea id="import-raw-text" class="form-control" rows="12" placeholder="EX NO: 24&#10;TITLE: K-MEANS CLUSTERING&#10;AIM: ...&#10;ALGORITHM: ...&#10;CODING: ...&#10;OUTPUT: ...&#10;RESULT: ..."></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="btn-cancel-import">Cancel</button>
-        <button class="btn btn-primary" id="btn-apply-import">Parse & Populate Form</button>
+        <button class="btn btn-secondary" id="btn-cancel-import" type="button">Cancel</button>
+        <button class="btn btn-primary" id="btn-apply-import" type="button">Parse & Populate Form</button>
       </div>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=4.0"></script>
 </body>
 </html>
