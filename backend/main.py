@@ -12,25 +12,46 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from .models.schemas import (
-    ExperimentData,
-    TemplateConfig,
-    AnalysisResult,
-    ContinuationRequest,
-    GenerationRequest,
-    GenerationResponse,
-    ValidationReport,
-    Draft,
-    AiAssistRequest,
-    AiAssistResponse
-)
-from .template.analyzer import TemplateAnalyzer
-from .template.template_store import TemplateStore
-from .generator.docx_generator import DocxGenerator
-from .parser.section_parser import SectionParser
-from .parser.ai_parser import AiParser
-from .validator.page_checker import PageChecker
-from .layout.page_engine import PageEngine
+try:
+    from .models.schemas import (
+        ExperimentData,
+        TemplateConfig,
+        AnalysisResult,
+        ContinuationRequest,
+        GenerationRequest,
+        GenerationResponse,
+        ValidationReport,
+        Draft,
+        AiAssistRequest,
+        AiAssistResponse
+    )
+    from .template.analyzer import TemplateAnalyzer
+    from .template.template_store import TemplateStore
+    from .generator.docx_generator import DocxGenerator
+    from .parser.section_parser import SectionParser
+    from .parser.ai_parser import AiParser
+    from .validator.page_checker import PageChecker
+    from .layout.page_engine import PageEngine
+except (ImportError, ValueError):
+    from backend.models.schemas import (
+        ExperimentData,
+        TemplateConfig,
+        AnalysisResult,
+        ContinuationRequest,
+        GenerationRequest,
+        GenerationResponse,
+        ValidationReport,
+        Draft,
+        AiAssistRequest,
+        AiAssistResponse
+    )
+    from backend.template.analyzer import TemplateAnalyzer
+    from backend.template.template_store import TemplateStore
+    from backend.generator.docx_generator import DocxGenerator
+    from backend.parser.section_parser import SectionParser
+    from backend.parser.ai_parser import AiParser
+    from backend.validator.page_checker import PageChecker
+    from backend.layout.page_engine import PageEngine
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -236,3 +257,9 @@ def ai_assist(req: AiAssistRequest):
 # Serve Frontend static files if directory exists
 if os.path.exists(FRONTEND_DIR):
     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=port)
+
