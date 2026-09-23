@@ -3,8 +3,15 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Smart API Base determination:
+  // If running from file:// or without host, talk to the live Render backend!
+  // If running from web server (Render, localhost, etc.), use same-origin relative path "".
+  const API_BASE = (window.location.protocol === "file:" || !window.location.host)
+    ? "https://college-lab-record-system.onrender.com"
+    : "";
+
   // State
-  let currentMode = "continue"; // "continue" or "new"
+  let currentMode = "new"; // Default to "new" mode for zero-barrier generation
   let uploadedRecordFileId = null;
   let selectedTemplateId = "python_lab_reference";
   let attachedImageData = null;
@@ -51,12 +58,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const statTotalPages = document.getElementById("stat-total-pages");
   const statStudentRoll = document.getElementById("stat-student-roll");
 
-  // Buttons
+  // Buttons & Banners
   const btnSampleData = document.getElementById("btn-sample-data");
   const btnPreview = document.getElementById("btn-preview");
   const btnGenerate = document.getElementById("btn-generate");
   const btnDownloadFile = document.getElementById("btn-download-file");
   const generationBanner = document.getElementById("generation-banner");
+  const inlineStatusBanner = document.getElementById("inline-status-banner");
   const btnSaveDraft = document.getElementById("btn-save-draft");
 
   // Modals
@@ -352,7 +360,7 @@ searchInput.addEventListener("input", (e) => {
   // --- FETCH TEMPLATES ---
   async function fetchTemplates() {
     try {
-      const res = await fetch("/api/templates");
+      const res = await fetch(API_BASE + "/api/templates");
       if (res.ok) {
         const templates = await res.json();
         selectTemplate.innerHTML = "";
@@ -424,7 +432,7 @@ searchInput.addEventListener("input", (e) => {
     recordDropzone.querySelector("h3").textContent = "Analyzing document structure...";
 
     try {
-      const res = await fetch("/api/upload/document", {
+      const res = await fetch(API_BASE + "/api/upload/document", {
         method: "POST",
         body: formData
       });
@@ -589,7 +597,13 @@ searchInput.addEventListener("input", (e) => {
 
   allInputs.forEach(input => {
     if (input) {
-      input.addEventListener("input", updateLivePreview);
+      input.addEventListener("input", () => {
+        input.classList.remove("has-error");
+        if (inlineStatusBanner && inlineStatusBanner.classList.contains("status-error")) {
+          inlineStatusBanner.classList.add("hidden");
+        }
+        updateLivePreview();
+      });
     }
   });
 
@@ -670,7 +684,7 @@ searchInput.addEventListener("input", (e) => {
     }
 
     try {
-      const res = await fetch("/api/ai/suggest", {
+      const res = await fetch(API_BASE + "/api/ai/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ field, content, mode })
@@ -713,7 +727,7 @@ searchInput.addEventListener("input", (e) => {
     if (!raw) return;
 
     try {
-      const res = await fetch("/api/experiment/parse-text", {
+      const res = await fetch(API_BASE + "/api/experiment/parse-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: raw })
@@ -739,8 +753,36 @@ searchInput.addEventListener("input", (e) => {
     }
   });
 
+  // Helper to display status banner
+  function showStatus(type, message, htmlContent = null) {
+    if (!inlineStatusBanner) return;
+    inlineStatusBanner.className = `inline-status-banner status-${type}`;
+    if (htmlContent) {
+      inlineStatusBanner.innerHTML = htmlContent;
+    } else {
+      inlineStatusBanner.textContent = message;
+    }
+    inlineStatusBanner.classList.remove("hidden");
+  }
+
+  // --- PREVIEW BUTTON LISTENER ---
+  if (btnPreview) {
+    btnPreview.addEventListener("click", () => {
+      const previewCol = document.querySelector(".preview-column") || document.getElementById("book-spread");
+      if (previewCol) {
+        previewCol.scrollIntoView({ behavior: "smooth" });
+      }
+      updateLivePreview();
+      showStatus("info", "Preview updated to match current form inputs.");
+    });
+  }
+
   // --- GENERATE DOCX ---
   btnGenerate.addEventListener("click", async () => {
+    // Clear any previous error styling
+    allInputs.forEach(i => { if (i) i.classList.remove("has-error"); });
+    if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
+
     const expData = {
       experiment_number: expNumberInput.value.trim(),
       title: expTitleInput.value.trim(),
@@ -759,40 +801,59 @@ searchInput.addEventListener("input", (e) => {
       register_number: registerNumberInput.value.trim()
     };
 
-    if (!expData.experiment_number || !expData.title || !expData.aim || !expData.coding || !expData.result) {
-      alert("Please fill in all required fields (Experiment Number, Title, Aim, Coding, Result).");
+    // Validation: Check required fields with visual feedback
+    const missing = [];
+    if (!expData.experiment_number) { missing.push("Experiment No"); expNumberInput.classList.add("has-error"); }
+    if (!expData.title) { missing.push("Title"); expTitleInput.classList.add("has-error"); }
+    if (!expData.aim) { missing.push("Aim"); expAimInput.classList.add("has-error"); }
+    if (!expData.coding) { missing.push("Coding / Implementation"); expCodeInput.classList.add("has-error"); }
+    if (!expData.result) { missing.push("Result"); expResultInput.classList.add("has-error"); }
+
+    if (missing.length > 0) {
+      showStatus(
+        "error",
+        "",
+        `<strong>Missing required fields (${missing.join(", ")}):</strong> Please fill highlighted inputs or <button type="button" id="btn-quick-fill-sample" style="background:#b91c1c;color:#fff;border:1px solid #f87171;padding:3px 10px;border-radius:4px;cursor:pointer;margin-left:6px;font-weight:600;font-size:0.8rem;">Auto-fill Sample Experiment</button>`
+      );
+      const firstError = document.querySelector(".has-error");
+      if (firstError) {
+        firstError.focus();
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      const quickFillBtn = document.getElementById("btn-quick-fill-sample");
+      if (quickFillBtn) {
+        quickFillBtn.addEventListener("click", () => {
+          btnSampleData.click();
+          if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
+        });
+      }
       return;
     }
 
     btnGenerate.disabled = true;
-    btnGenerate.textContent = "⚡ Generating Print-Ready DOCX...";
+    btnGenerate.innerHTML = "<span class=\"spinner\"></span> ⚡ Compiling Print-Ready DOCX...";
+    showStatus("loading", "⚡ Generating print-ready DOCX with exact laboratory template styling... Please wait...");
 
     try {
-      let endpoint = "/api/experiment/generate";
+      let endpoint = `${API_BASE}/api/experiment/generate`;
       let payload = {
         experiment: expData,
         template_id: selectTemplate.value
       };
 
       if (currentMode === "continue") {
-        if (!uploadedRecordFileId) {
-          // If user clicked continue without uploading, offer reference template
-          const useSample = confirm("No existing record was uploaded yet. Would you like to append to the reference 12-page laboratory record?");
-          if (useSample) {
-            uploadedRecordFileId = "AI_ML_Python_Lab_Record_Reference.docx";
-          } else {
-            btnGenerate.disabled = false;
-            btnGenerate.textContent = "⚡ Generate DOCX";
-            return;
-          }
+        if (uploadedRecordFileId) {
+          endpoint = `${API_BASE}/api/record/continue`;
+          payload = {
+            original_filename: uploadedRecordFileId,
+            experiment: expData,
+            template_id: selectTemplate.value,
+            preserve_original: true
+          };
+        } else {
+          // If in continue mode but no file was uploaded, seamlessly generate a fresh record without blocking!
+          showStatus("loading", "⚡ Generating clean laboratory record document...");
         }
-        endpoint = "/api/record/continue";
-        payload = {
-          original_filename: uploadedRecordFileId,
-          experiment: expData,
-          template_id: selectTemplate.value,
-          preserve_original: true
-        };
       }
 
       const res = await fetch(endpoint, {
@@ -801,24 +862,57 @@ searchInput.addEventListener("input", (e) => {
         body: JSON.stringify(payload)
       });
 
-      const result = await res.json();
-      if (result.success) {
-        generationBanner.classList.remove("hidden");
-        btnDownloadFile.href = result.download_url;
-        btnDownloadFile.setAttribute("download", result.filename);
-        document.getElementById("banner-title").textContent = `Document Ready (${result.filename})`;
-        document.getElementById("banner-desc").textContent = result.message;
+      if (!res.ok) {
+        throw new Error(`Server responded with status ${res.status} (${res.statusText})`);
+      }
 
-        // Smooth scroll to banner
-        generationBanner.scrollIntoView({ behavior: "smooth" });
+      const result = await res.json();
+      if (result.success && result.download_url) {
+        const fullDownloadUrl = result.download_url.startsWith("http")
+          ? result.download_url
+          : `${API_BASE}${result.download_url}`;
+
+        // Update Top Banner
+        generationBanner.classList.remove("hidden");
+        btnDownloadFile.href = fullDownloadUrl;
+        btnDownloadFile.setAttribute("download", result.filename);
+        const bTitle = document.getElementById("banner-title");
+        const bDesc = document.getElementById("banner-desc");
+        if (bTitle) bTitle.textContent = `Document Ready (${result.filename})`;
+        if (bDesc) bDesc.textContent = result.message || "Your laboratory record has been successfully compiled.";
+
+        // Update Inline Status Banner with Direct Download Button
+        showStatus(
+          "success",
+          "",
+          `<span>✅ <strong>Success!</strong> ${result.filename} generated successfully.</span> <a href="${fullDownloadUrl}" download="${result.filename}" style="background:#16a34a;color:#fff;padding:5px 12px;border-radius:4px;text-decoration:none;font-weight:600;display:inline-block;margin-left:10px;">📥 Download DOCX</a>`
+        );
+
+        // Auto-trigger direct browser download
+        try {
+          const dlLink = document.createElement("a");
+          dlLink.href = fullDownloadUrl;
+          dlLink.download = result.filename;
+          document.body.appendChild(dlLink);
+          dlLink.click();
+          dlLink.remove();
+        } catch (dlErr) {
+          console.warn("Direct download auto-trigger bypassed:", dlErr);
+        }
+
+        inlineStatusBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
       } else {
-        alert("Generation failed: " + (result.warnings ? result.warnings.join(", ") : "Unknown error"));
+        const errMsg = (result.warnings && result.warnings.length)
+          ? result.warnings.join(", ")
+          : (result.error || "Generation could not be completed.");
+        showStatus("error", `Generation failed: ${errMsg}`);
       }
     } catch (e) {
-      alert("Generation failed: " + e.message);
+      console.error("DOCX Generation error:", e);
+      showStatus("error", `Failed to generate document: ${e.message}. Please check if backend is reachable.`);
     } finally {
       btnGenerate.disabled = false;
-      btnGenerate.textContent = "⚡ Generate DOCX";
+      btnGenerate.innerHTML = "⚡ Generate DOCX";
     }
   });
 

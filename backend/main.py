@@ -171,15 +171,20 @@ def generate_new_record(req: GenerationRequest):
     # Validate output
     val_report = PageChecker.validate_document(output_path, exp)
 
+    file_exists = os.path.exists(output_path) and os.path.getsize(output_path) > 0
+    all_warnings = list(val_report.warnings)
+    if not val_report.is_valid:
+        all_warnings.extend(val_report.errors)
+
     return GenerationResponse(
-        success=val_report.is_valid,
+        success=file_exists,
         filename=output_filename,
         download_url=f"/api/download/{output_filename}",
         message="Laboratory record successfully generated.",
         experiment_number=exp.experiment_number,
         total_pages_estimated=4,
         is_continuation=False,
-        warnings=val_report.warnings
+        warnings=all_warnings
     )
 
 @app.post("/api/record/continue", response_model=GenerationResponse)
@@ -209,15 +214,20 @@ def continue_record(req: ContinuationRequest):
     # Validate output
     val_report = PageChecker.validate_document(output_path, exp)
 
+    file_exists = os.path.exists(output_path) and os.path.getsize(output_path) > 0
+    all_warnings = list(val_report.warnings)
+    if not val_report.is_valid:
+        all_warnings.extend(val_report.errors)
+
     return GenerationResponse(
-        success=val_report.is_valid,
+        success=file_exists,
         filename=output_filename,
         download_url=f"/api/download/{output_filename}",
         message=f"Experiment {exp.experiment_number} successfully appended to existing record.",
         experiment_number=exp.experiment_number,
         total_pages_estimated=4,
         is_continuation=True,
-        warnings=val_report.warnings
+        warnings=all_warnings
     )
 
 @app.get("/api/download/{filename}")

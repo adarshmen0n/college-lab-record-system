@@ -508,6 +508,40 @@ body {
   flex: 1;
 }
 
+/* Inline Status Banner */
+.inline-status-banner {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+}
+
+.status-loading {
+  background: #eff6ff;
+  border: 1.5px solid #93c5fd;
+  color: #1e40af;
+}
+
+.status-success {
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  color: #166534;
+}
+
+.status-error {
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  color: #991b1b;
+}
+
+.has-error {
+  border-color: #ef4444 !important;
+  background-color: #fff5f5 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
 /* Sticky Preview Column */
 .sticky-preview-wrapper {
   position: sticky;
