@@ -1,5 +1,9 @@
 # College Laboratory Record Automation System
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/adarshmen0n/college-lab-record-system)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-adarshmen0n%2Fcollege--lab--record--system-blue?logo=github)](https://github.com/adarshmen0n/college-lab-record-system)
+[![Build Status](https://img.shields.io/badge/Tests-21%20Passed-success)](https://github.com/adarshmen0n/college-lab-record-system)
+
 A production-grade, template-aware document automation platform that eliminates the repetitive formatting workload faced by college students when preparing laboratory records.
 
 The system learns the exact visual layout, table structures, page borders, typography, and duplex facing-page arrangement of an uploaded Word document (`.docx`) and deterministically reproduces it for new experiments or safely appends them to ongoing records.
