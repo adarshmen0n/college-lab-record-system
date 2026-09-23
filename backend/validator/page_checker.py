@@ -32,7 +32,8 @@ class PageChecker:
             "has_footers": False,
             "coding_font_is_times_new_roman": True,
             "coding_size_is_12pt": True,
-            "experiment_number_matches": True
+            "experiment_number_matches": True,
+            "no_instruction_leakage": True
         }
         errors: List[str] = []
         warnings: List[str] = []
@@ -123,8 +124,29 @@ class PageChecker:
                 checks["experiment_number_matches"] = False
                 errors.append(f"Experiment number '{expected_exp.experiment_number}' not found in generated document.")
 
+        # 6. Check for Prompt & System Instruction Leakage
+        forbidden_phrases = [
+            "MASTER UPDATE PROMPT",
+            "FINAL MASTER EXECUTION PROMPT",
+            "PROJECT UPDATE — EXPERIMENT HEADER",
+            "YOU ARE MODIFYING THE EXISTING",
+            "YOU ARE WORKING ON THE EXISTING",
+            "DO NOT REBUILD THE PROJECT",
+            "ANTIGRAVITY INSTRUCTIONS",
+            "DEVELOPER INSTRUCTIONS",
+            "IMPLEMENTATION INSTRUCTIONS",
+            "SYSTEM PROMPT"
+        ]
+        full_doc_text = (all_tables_text + " " + all_p_text).upper()
+        found_leaks = [phrase for phrase in forbidden_phrases if phrase in full_doc_text]
+        if found_leaks:
+            checks["no_instruction_leakage"] = False
+            errors.append(f"Prompt/instruction leakage detected in document: found '{found_leaks[0]}'")
+
         # Determine overall validity
         if not checks["can_open_docx"]:
+            is_valid = False
+        elif not checks["no_instruction_leakage"]:
             is_valid = False
         elif not checks["has_header_table"]:
             is_valid = False

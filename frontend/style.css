@@ -886,7 +886,7 @@ body {
   flex-direction: column;
   position: relative;
   box-sizing: border-box;
-  padding: 24px; /* Scaled representation of 0.75 in margins */
+  padding: 0 !important;
   font-family: 'Times New Roman', Times, serif;
   transition: transform 0.15s ease;
 }

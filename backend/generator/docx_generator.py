@@ -5,6 +5,7 @@ protection of existing content and pixel-accurate facing-page layout.
 """
 import os
 import io
+import re
 import base64
 import hashlib
 import docx
@@ -163,47 +164,85 @@ class DocxGenerator:
                 r_err = p_err.add_run(f"[Screenshot attached: {os.path.basename(img_item)}]")
                 r_err.font.italic = True
 
+    FORBIDDEN_LEAKAGE_STRINGS = [
+        "MASTER UPDATE PROMPT",
+        "FINAL MASTER EXECUTION PROMPT",
+        "PROJECT UPDATE — EXPERIMENT HEADER",
+        "YOU ARE MODIFYING THE EXISTING",
+        "YOU ARE WORKING ON THE EXISTING",
+        "DO NOT REBUILD THE PROJECT",
+        "ANTIGRAVITY INSTRUCTIONS",
+        "DEVELOPER INSTRUCTIONS",
+        "IMPLEMENTATION INSTRUCTIONS",
+        "SYSTEM PROMPT"
+    ]
+
+    @classmethod
+    def _sanitize_field(cls, text: Optional[str]) -> str:
+        """Strips out accidental prompt or developer instruction leakage before entering document."""
+        if not text:
+            return ""
+        cleaned = text
+        for s in cls.FORBIDDEN_LEAKAGE_STRINGS:
+            pattern = re.compile(re.escape(s), re.IGNORECASE)
+            cleaned = pattern.sub("", cleaned)
+        return cleaned.strip()
+
     @classmethod
     def _render_experiment_pages(cls, doc: docx.Document, plan: ExperimentLayoutPlan, data: ExperimentData, config: TemplateConfig):
         """Renders the planned pages into the docx Document with strict 14pt headings and 12pt content."""
-        proc_heading = f"{data.procedure_heading or 'ALGORITHM'}:"
-        code_heading = f"{data.code_heading or 'CODING'}:"
+        data_clean = data.model_copy()
+        data_clean.aim = cls._sanitize_field(data.aim)
+        data_clean.algorithm = cls._sanitize_field(data.algorithm)
+        data_clean.coding = cls._sanitize_field(data.coding)
+        data_clean.output = cls._sanitize_field(data.output)
+        data_clean.result = cls._sanitize_field(data.result)
+
+        proc_raw = (data.procedure_heading or 'ALGORITHM').strip().rstrip(':')
+        proc_heading = f"{proc_raw}:"
+        code_raw = (data.code_heading or 'CODING').strip().rstrip(':')
+        code_heading = f"{code_raw}:"
 
         for i, page in enumerate(plan.pages):
             if page.page_type == "EXP_START":
                 # Page 1 (Right): Header Table, Aim, Algorithm/Procedure, Code/Commands Part 1
-                TableManager.create_header_table(doc, data, config)
+                TableManager.create_header_table(doc, data_clean, config)
                 cls._add_heading(doc, "AIM:", "Times New Roman", 14)
-                cls._add_body_paragraph(doc, data.aim, "Times New Roman", 12)
+                cls._add_body_paragraph(doc, data_clean.aim, "Times New Roman", 12)
                 cls._add_heading(doc, proc_heading, "Times New Roman", 14)
-                cls._add_algorithm_steps(doc, page.algorithm_steps, "Times New Roman")
+                clean_steps = [cls._sanitize_field(st) for st in page.algorithm_steps if cls._sanitize_field(st)]
+                cls._add_algorithm_steps(doc, clean_steps, "Times New Roman")
                 cls._add_heading(doc, code_heading, "Times New Roman", 14)
-                cls._add_code_block(doc, page.code_lines, "Times New Roman", 12)
+                clean_code = [cls._sanitize_field(cl) for cl in page.code_lines]
+                cls._add_code_block(doc, clean_code, "Times New Roman", 12)
 
             elif page.page_type == "OUTPUT":
                 # Page 2 (Left): OUTPUT
                 cls._add_heading(doc, "OUTPUT:", "Times New Roman", 14)
                 if page.output_lines:
-                    cls._add_output_block(doc, page.output_lines, "Times New Roman")
+                    clean_out = [cls._sanitize_field(ol) for ol in page.output_lines]
+                    cls._add_output_block(doc, clean_out, "Times New Roman")
                 if page.output_images:
                     cls._embed_images(doc, page.output_images)
 
             elif page.page_type == "EXP_CONT":
                 # Page 3 (Right): Code continuation, Evaluation Table, Result
                 if page.code_lines:
-                    cls._add_code_block(doc, page.code_lines, "Times New Roman", 12)
+                    clean_code_p3 = [cls._sanitize_field(cl) for cl in page.code_lines]
+                    cls._add_code_block(doc, clean_code_p3, "Times New Roman", 12)
                     p_spacer = doc.add_paragraph()
                     p_spacer.paragraph_format.space_before = Pt(4)
 
                 TableManager.create_evaluation_table(doc, config)
                 cls._add_heading(doc, "RESULT:", "Times New Roman", 14)
-                cls._add_body_paragraph(doc, data.result, "Times New Roman", 12)
+                cls._add_body_paragraph(doc, data_clean.result, "Times New Roman", 12)
 
             elif page.page_type == "BLANK_BACK":
                 # Page 4 (Left): Blank or overflow
                 if page.output_lines:
                     cls._add_heading(doc, "OUTPUT (CONTINUED):", "Times New Roman", 14)
-                    cls._add_output_block(doc, page.output_lines, "Times New Roman")
+                    clean_out_p4 = [cls._sanitize_field(ol) for ol in page.output_lines]
+                    cls._add_output_block(doc, clean_out_p4, "Times New Roman")
                 else:
                     p_blank = doc.add_paragraph()
                     p_blank.paragraph_format.space_before = Pt(200)

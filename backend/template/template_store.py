@@ -47,6 +47,9 @@ class TemplateStore:
             t_obj.subject = tsubj
             t_obj.font_family = "Times New Roman"
             t_obj.code_font_family = "Times New Roman"
+            t_obj.title_font_size = 14
+            t_obj.heading_font_size = 14
+            t_obj.body_font_size = 12
             t_obj.code_font_size = 12
             self.save_template(t_obj)
 

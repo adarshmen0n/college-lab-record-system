@@ -41,9 +41,9 @@ class TemplateConfig(BaseModel):
     has_page_border: bool = True
     font_family: str = "Times New Roman"
     code_font_family: str = "Times New Roman"
-    title_font_size: int = 12
-    heading_font_size: int = 12
-    body_font_size: int = 11
+    title_font_size: int = 14
+    heading_font_size: int = 14
+    body_font_size: int = 12
     code_font_size: int = 12
     header_table_xml: Optional[str] = None
     evaluation_table_xml: Optional[str] = None
