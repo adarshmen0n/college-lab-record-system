@@ -32,7 +32,10 @@
     <!-- Navigation Tabs -->
     <nav class="nav-tabs">
       <button class="tab-btn active" data-tab="tab-create" type="button">
-        <span class="tab-icon">✨</span> Create Lab Record
+        <span class="tab-icon">✨</span> Experiment Editor
+      </button>
+      <button class="tab-btn" data-tab="tab-workspace" type="button">
+        <span class="tab-icon">📚</span> Workspace (<span id="workspace-count">0</span>)
       </button>
       <button class="tab-btn" data-tab="tab-continue" type="button">
         <span class="tab-icon">🔄</span> Append to Existing Record (.docx)
@@ -105,6 +108,56 @@
           </div>
         </div>
 
+        <!-- MODE: MULTI-EXPERIMENT WORKSPACE TAB -->
+        <div class="tab-content hidden" id="tab-workspace">
+          <div class="card card-primary">
+            <div class="card-header">
+              <div>
+                <h2>Multi-Experiment Workspace</h2>
+                <p class="card-subtitle">Manage, reorder, and compile multiple experiments into a single unified record document.</p>
+              </div>
+              <div class="card-actions">
+                <button class="btn btn-primary btn-sm" id="btn-ws-new-exp" type="button">➕ New Experiment</button>
+                <button class="btn btn-secondary btn-sm" id="btn-ws-clear" type="button">🗑 Clear All</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- Workspace Stats Bar -->
+              <div class="workspace-summary-bar">
+                <div class="summary-stat">
+                  <span class="stat-label">Saved Experiments</span>
+                  <strong class="stat-value" id="ws-stat-count">0</strong>
+                </div>
+                <div class="summary-stat">
+                  <span class="stat-label">Estimated Total Pages</span>
+                  <strong class="stat-value" id="ws-stat-pages">0</strong>
+                </div>
+                <div class="summary-stat">
+                  <span class="stat-label">Document Layout</span>
+                  <strong class="stat-value">A4 Duplex (4 Pages/Exp)</strong>
+                </div>
+              </div>
+
+              <!-- Workspace Global Action Buttons -->
+              <div class="workspace-actions-toolbar">
+                <button class="btn btn-primary" id="btn-ws-generate" type="button">⚡ Generate Combined DOCX (<span id="ws-btn-exp-count">0</span> Exps)</button>
+                <button class="btn btn-secondary" id="btn-ws-preview" type="button">👁 Preview All Pages</button>
+              </div>
+
+              <!-- Workspace Cards List -->
+              <div class="workspace-cards-list" id="workspace-cards-list">
+                <!-- Dynamically injected experiment cards -->
+                <div class="empty-state" id="workspace-empty-state">
+                  <div class="empty-icon">📂</div>
+                  <h3>Your workspace is empty</h3>
+                  <p>Create an experiment in the editor and click "Save to Workspace", or click below to start with a sample experiment.</p>
+                  <button class="btn btn-secondary btn-sm" id="btn-ws-add-sample" type="button" style="margin-top: 0.75rem;">Add Sample Experiment</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- EXPERIMENT FORM (Shared across modes) -->
         <div class="card card-experiment" id="experiment-form-card">
           <div class="card-header">
@@ -116,6 +169,17 @@
             </div>
           </div>
           <div class="card-body">
+            <!-- Workspace Active Edit Banner -->
+            <div class="workspace-edit-alert hidden" id="workspace-edit-alert">
+              <div class="alert-content">
+                <span class="alert-icon">✏️</span>
+                <div>
+                  <strong>Editing Workspace Item:</strong> <span id="ws-editing-label">Exp 1.D - COMPREHENSION</span>
+                  <p class="alert-sub">Saving will update this experiment in your workspace.</p>
+                </div>
+              </div>
+              <button class="btn btn-secondary btn-xs" id="btn-cancel-ws-edit" type="button">Cancel Editing</button>
+            </div>
             <!-- Row 1: Exp Number & Date -->
             <div class="form-row">
               <div class="form-group col-6">
@@ -214,7 +278,8 @@
 
             <!-- Action Buttons -->
             <div class="form-actions">
-              <button class="btn btn-secondary btn-lg" id="btn-preview" type="button">👁 Preview Facing Spread</button>
+              <button class="btn btn-secondary btn-lg" id="btn-save-workspace" type="button">💾 Save to Workspace</button>
+              <button class="btn btn-secondary btn-lg" id="btn-preview" type="button">👁 Preview Document</button>
               <button class="btn btn-primary btn-lg" id="btn-generate" type="button">⚡ Generate DOCX</button>
             </div>
 
@@ -238,113 +303,48 @@
         </div>
       </section>
 
-      <!-- Right Column: Interactive Facing-Pages Print Simulation -->
+      <!-- Right Column: Interactive Document Page-by-Page Preview -->
       <section class="preview-column">
         <div class="sticky-preview-wrapper">
           <div class="preview-header">
             <div class="preview-title">
-              <h3>📖 Print Spread Simulation</h3>
-              <p>Dual-page layout as bound in physical college laboratory records</p>
+              <h3>📖 Document Page Preview</h3>
+              <p>True A4 page simulation (0.75" margins, Times New Roman 14pt/12pt, exact page breaks & blank pages)</p>
             </div>
-            <div class="preview-controls">
-              <div class="view-mode-toggle" id="view-mode-toggle">
-                <button class="view-btn active" data-view="spread" title="Side-by-Side Facing Pages" type="button">📖 Spread</button>
-                <button class="view-btn" data-view="left" title="Left Page (Output)" type="button">📄 Left</button>
-                <button class="view-btn" data-view="right" title="Right Page (Exp)" type="button">📄 Right</button>
-                <button class="view-btn" data-view="stacked" title="Stacked View" type="button">📑 Stacked</button>
+            <div class="preview-controls-bar">
+              <!-- Page Navigator -->
+              <div class="page-nav-controls">
+                <button class="btn-icon" id="btn-prev-page" title="Previous Page" type="button">◀</button>
+                <span class="page-num-display">
+                  Page <input type="number" id="viewer-page-input" min="1" max="4" value="1"> of <span id="viewer-total-pages">4</span>
+                </span>
+                <button class="btn-icon" id="btn-next-page" title="Next Page" type="button">▶</button>
               </div>
+
+              <!-- View Mode Toggle -->
+              <div class="view-mode-toggle" id="view-mode-toggle">
+                <button class="view-btn active" data-view="spread" title="Duplex Facing Spread" type="button">📖 Spread</button>
+                <button class="view-btn" data-view="single" title="Single Page" type="button">📄 Single</button>
+                <button class="view-btn" data-view="all" title="All Pages (Continuous)" type="button">📑 All</button>
+              </div>
+
+              <!-- Zoom Controls -->
+              <div class="zoom-controls">
+                <button class="btn-icon" id="btn-zoom-out" title="Zoom Out" type="button">➖</button>
+                <span class="zoom-label" id="zoom-label">100%</span>
+                <button class="btn-icon" id="btn-zoom-in" title="Zoom In" type="button">➕</button>
+                <button class="btn-icon" id="btn-zoom-fit" title="Fit to Screen" type="button">⛶</button>
+              </div>
+
+              <!-- Print / PDF Button -->
+              <button class="btn-icon" id="btn-print-preview" title="Print / PDF View" type="button">🖨</button>
             </div>
           </div>
 
-          <!-- Facing Pages Book Spread Container -->
-          <div class="book-spread-container" id="book-spread-container">
-            <!-- LEFT PAGE: OUTPUT -->
-            <div class="sheet-page sheet-left" id="sheet-left">
-              <div class="page-inner-border">
-                <div class="sheet-header-tag">LEFT PAGE (OUTPUT)</div>
-                <div class="sheet-content" id="preview-left-content">
-                  <h4 class="preview-heading">OUTPUT:</h4>
-                  <div class="preview-output-text" id="preview-output-body">
-                    Generating squares up to 5:<br>
-                    Square: 0<br>
-                    Square: 1<br>
-                    Square: 4<br>
-                    Square: 9<br>
-                    Square: 16
-                  </div>
-                  <div id="preview-output-img-container"></div>
-                </div>
-                <div class="sheet-footer">
-                  <span id="preview-foot-left-1">ADARSH MENON</span>
-                  <span id="preview-foot-right-1">714025247005</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- RIGHT PAGE: EXPERIMENT -->
-            <div class="sheet-page sheet-right" id="sheet-right">
-              <div class="page-inner-border">
-                <div class="sheet-header-tag">RIGHT PAGE (EXPERIMENT)</div>
-                <div class="sheet-content" id="preview-right-content">
-                  <!-- Header Table Preview -->
-                  <table class="preview-header-table">
-                    <tr>
-                      <td class="cell-ex">EX NO:<span id="prev-ex-no">1.D</span></td>
-                      <td class="cell-title" id="prev-title">COMPREHENSION</td>
-                    </tr>
-                    <tr>
-                      <td class="cell-date">DATE:<span id="prev-date">23-09-2026</span></td>
-                      <td class="cell-subtitle" id="prev-subtitle">GENERATOR COMPREHENSION</td>
-                    </tr>
-                  </table>
-
-                  <h4 class="preview-heading">AIM:</h4>
-                  <p class="preview-text" id="prev-aim">To create a generator using generator comprehension and iterate over elements using functions.</p>
-
-                  <h4 class="preview-heading">ALGORITHM:</h4>
-                  <ol class="preview-list" id="prev-algo">
-                    <li>Define generator function.</li>
-                    <li>Yield square numbers.</li>
-                    <li>Display results.</li>
-                  </ol>
-
-                  <h4 class="preview-heading">CODING:</h4>
-                  <pre class="preview-code font-serif" id="prev-code">def gen_squares(n):
-    return (x**2 for x in range(n))
-
-for val in gen_squares(5):
-    print(val)</pre>
-
-                  <!-- Master Evaluation Table Preview -->
-                  <div class="preview-eval-container">
-                    <table class="preview-eval-table">
-                      <tr>
-                        <td>PROGRAM AND EXECUTION</td>
-                        <td>30</td>
-                      </tr>
-                      <tr>
-                        <td>VIVA VOCE</td>
-                        <td>10</td>
-                      </tr>
-                      <tr>
-                        <td>RECORD MARKS</td>
-                        <td>10</td>
-                      </tr>
-                      <tr>
-                        <td>TOTAL</td>
-                        <td>50</td>
-                      </tr>
-                      <tr>
-                        <td class="signature-cell" colspan="2">STAFF SIGNATURE</td>
-                      </tr>
-                    </table>
-                  </div>
-                </div>
-                <div class="sheet-footer">
-                  <span id="preview-foot-left-2">ADARSH MENON</span>
-                  <span id="preview-foot-right-2">714025247005</span>
-                </div>
-              </div>
+          <!-- Paginated Document Sheet Container -->
+          <div class="paginated-document-wrapper" id="paginated-document-wrapper">
+            <div class="paginated-pages-container" id="paginated-pages-container">
+              <!-- A4 Page Sheets will be dynamically rendered here by app.js -->
             </div>
           </div>
         </div>

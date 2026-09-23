@@ -77,40 +77,40 @@ class DocxGenerator:
         r_f1.font.bold = True
 
     @staticmethod
-    def _add_heading(doc, text: str, font_family: str, font_size: int = 12):
+    def _add_heading(doc, text: str, font_family: str = "Times New Roman", font_size: int = 14):
         p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(10)
-        p.paragraph_format.space_after = Pt(4)
+        p.paragraph_format.space_before = Pt(8)
+        p.paragraph_format.space_after = Pt(3)
         run = p.add_run(text)
-        run.font.name = font_family
-        run.font.size = Pt(font_size)
+        run.font.name = "Times New Roman"
+        run.font.size = Pt(14)
         run.font.bold = True
         return p
 
     @staticmethod
-    def _add_body_paragraph(doc, text: str, font_family: str, font_size: int = 11):
+    def _add_body_paragraph(doc, text: str, font_family: str = "Times New Roman", font_size: int = 12):
         p = doc.add_paragraph()
         p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_before = Pt(2)
-        p.paragraph_format.space_after = Pt(6)
+        p.paragraph_format.space_after = Pt(5)
         p.paragraph_format.line_spacing = 1.15
         run = p.add_run(text)
-        run.font.name = font_family
-        run.font.size = Pt(font_size)
+        run.font.name = "Times New Roman"
+        run.font.size = Pt(12)
         return p
 
     @staticmethod
-    def _add_algorithm_steps(doc, steps: List[str], font_family: str):
+    def _add_algorithm_steps(doc, steps: List[str], font_family: str = "Times New Roman"):
         for idx, step in enumerate(steps, 1):
             p = doc.add_paragraph()
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             p.paragraph_format.left_indent = Inches(0.4)
-            p.paragraph_format.space_before = Pt(2)
-            p.paragraph_format.space_after = Pt(3)
+            p.paragraph_format.space_before = Pt(1.5)
+            p.paragraph_format.space_after = Pt(2.5)
             p.paragraph_format.line_spacing = 1.15
             run = p.add_run(f"{idx}. {step}")
-            run.font.name = font_family
-            run.font.size = Pt(11)
+            run.font.name = "Times New Roman"
+            run.font.size = Pt(12)
 
     @staticmethod
     def _add_code_block(doc, code_lines: List[str], code_font: str = "Times New Roman", font_size: int = 12):
@@ -121,7 +121,7 @@ class DocxGenerator:
             p.paragraph_format.space_after = Pt(0)
             p.paragraph_format.line_spacing = 1.05
             run = p.add_run(line if line else " ")
-            # Strictly enforce Times New Roman 12 pt for all technical content
+            # Strictly enforce Times New Roman 12 pt with exact whitespace preservation
             run.font.name = "Times New Roman"
             run.font.size = Pt(12)
 
@@ -131,11 +131,11 @@ class DocxGenerator:
             p = doc.add_paragraph()
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after = Pt(2)
+            p.paragraph_format.space_after = Pt(1.5)
             p.paragraph_format.line_spacing = 1.1
             run = p.add_run(line if line else " ")
-            run.font.name = font_family
-            run.font.size = Pt(11)
+            run.font.name = "Times New Roman"
+            run.font.size = Pt(12)
 
     @staticmethod
     def _embed_images(doc, images: List[str]):
@@ -165,7 +165,7 @@ class DocxGenerator:
 
     @classmethod
     def _render_experiment_pages(cls, doc: docx.Document, plan: ExperimentLayoutPlan, data: ExperimentData, config: TemplateConfig):
-        """Renders the planned pages into the docx Document."""
+        """Renders the planned pages into the docx Document with strict 14pt headings and 12pt content."""
         proc_heading = f"{data.procedure_heading or 'ALGORITHM'}:"
         code_heading = f"{data.code_heading or 'CODING'}:"
 
@@ -173,18 +173,18 @@ class DocxGenerator:
             if page.page_type == "EXP_START":
                 # Page 1 (Right): Header Table, Aim, Algorithm/Procedure, Code/Commands Part 1
                 TableManager.create_header_table(doc, data, config)
-                cls._add_heading(doc, "AIM:", config.font_family, config.heading_font_size)
-                cls._add_body_paragraph(doc, data.aim, config.font_family, config.body_font_size)
-                cls._add_heading(doc, proc_heading, config.font_family, config.heading_font_size)
-                cls._add_algorithm_steps(doc, page.algorithm_steps, config.font_family)
-                cls._add_heading(doc, code_heading, config.font_family, config.heading_font_size)
+                cls._add_heading(doc, "AIM:", "Times New Roman", 14)
+                cls._add_body_paragraph(doc, data.aim, "Times New Roman", 12)
+                cls._add_heading(doc, proc_heading, "Times New Roman", 14)
+                cls._add_algorithm_steps(doc, page.algorithm_steps, "Times New Roman")
+                cls._add_heading(doc, code_heading, "Times New Roman", 14)
                 cls._add_code_block(doc, page.code_lines, "Times New Roman", 12)
 
             elif page.page_type == "OUTPUT":
                 # Page 2 (Left): OUTPUT
-                cls._add_heading(doc, "OUTPUT:", config.font_family, config.heading_font_size)
+                cls._add_heading(doc, "OUTPUT:", "Times New Roman", 14)
                 if page.output_lines:
-                    cls._add_output_block(doc, page.output_lines, config.font_family)
+                    cls._add_output_block(doc, page.output_lines, "Times New Roman")
                 if page.output_images:
                     cls._embed_images(doc, page.output_images)
 
@@ -193,17 +193,17 @@ class DocxGenerator:
                 if page.code_lines:
                     cls._add_code_block(doc, page.code_lines, "Times New Roman", 12)
                     p_spacer = doc.add_paragraph()
-                    p_spacer.paragraph_format.space_before = Pt(6)
+                    p_spacer.paragraph_format.space_before = Pt(4)
 
                 TableManager.create_evaluation_table(doc, config)
-                cls._add_heading(doc, "RESULT:", config.font_family, config.heading_font_size)
-                cls._add_body_paragraph(doc, data.result, config.font_family, config.body_font_size)
+                cls._add_heading(doc, "RESULT:", "Times New Roman", 14)
+                cls._add_body_paragraph(doc, data.result, "Times New Roman", 12)
 
             elif page.page_type == "BLANK_BACK":
                 # Page 4 (Left): Blank or overflow
                 if page.output_lines:
-                    cls._add_heading(doc, "OUTPUT (CONTINUED):", config.font_family, config.heading_font_size)
-                    cls._add_output_block(doc, page.output_lines, config.font_family)
+                    cls._add_heading(doc, "OUTPUT (CONTINUED):", "Times New Roman", 14)
+                    cls._add_output_block(doc, page.output_lines, "Times New Roman")
                 else:
                     p_blank = doc.add_paragraph()
                     p_blank.paragraph_format.space_before = Pt(200)
@@ -213,19 +213,50 @@ class DocxGenerator:
                 doc.add_page_break()
 
     @classmethod
-    def generate_new_record(cls, data: ExperimentData, config: TemplateConfig, output_path: str) -> str:
-        """Generates a complete new laboratory record from scratch."""
-        doc = docx.Document()
-        student_name = data.student_name or config.footer_left or "ADARSH MENON"
-        roll_no = data.register_number or config.footer_right or "714025247005"
+    def generate_workspace_record(cls, experiments: List[ExperimentData], config: TemplateConfig, output_path: str, original_path: Optional[str] = None) -> str:
+        """
+        Compiles a multi-experiment laboratory record containing all saved workspace experiments in user-defined order.
+        Strictly preserves original document if original_path is supplied.
+        """
+        if not experiments:
+            raise ValueError("No experiments provided for document generation.")
 
-        cls._apply_section_formatting(doc.sections[0], config, student_name, roll_no)
-        plan = PageEngine.plan_experiment(data, config)
-        cls._render_experiment_pages(doc, plan, data, config)
+        original_hash_before = None
+        if original_path and os.path.exists(original_path):
+            with open(original_path, "rb") as f:
+                original_hash_before = hashlib.sha256(f.read()).hexdigest()
+            doc = docx.Document(original_path)
+            # Add page break after existing content
+            doc.add_page_break()
+        else:
+            doc = docx.Document()
+            first_exp = experiments[0]
+            student_name = first_exp.student_name or config.footer_left or "ADARSH MENON"
+            roll_no = first_exp.register_number or config.footer_right or "714025247005"
+            cls._apply_section_formatting(doc.sections[0], config, student_name, roll_no)
+
+        for exp_idx, exp in enumerate(experiments):
+            plan = PageEngine.plan_experiment(exp, config)
+            cls._render_experiment_pages(doc, plan, exp, config)
+            # Add page break between experiments (except after the very last page of the last experiment)
+            if exp_idx < len(experiments) - 1:
+                doc.add_page_break()
 
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         doc.save(output_path)
+
+        if original_hash_before is not None:
+            with open(original_path, "rb") as f:
+                original_hash_after = hashlib.sha256(f.read()).hexdigest()
+            if original_hash_before != original_hash_after:
+                raise RuntimeError("CRITICAL INTEGRITY FAILURE: Original document was modified during continuation!")
+
         return output_path
+
+    @classmethod
+    def generate_new_record(cls, data: ExperimentData, config: TemplateConfig, output_path: str) -> str:
+        """Generates a complete new laboratory record from scratch."""
+        return cls.generate_workspace_record([data], config, output_path)
 
     @classmethod
     def continue_existing_record(cls, original_path: str, data: ExperimentData, config: TemplateConfig, output_path: str) -> str:
@@ -233,34 +264,5 @@ class DocxGenerator:
         Continues an existing record by appending a new experiment at the end.
         Strictly preserves the original document bytes (verified via SHA-256).
         """
-        if not os.path.exists(original_path):
-            raise FileNotFoundError(f"Original record not found at: {original_path}")
+        return cls.generate_workspace_record([data], config, output_path, original_path=original_path)
 
-        # Compute initial hash of original file
-        with open(original_path, "rb") as f:
-            original_hash_before = hashlib.sha256(f.read()).hexdigest()
-
-        # Load existing document
-        doc = docx.Document(original_path)
-
-        # Append page break after existing content
-        doc.add_page_break()
-
-        # Plan the new experiment
-        plan = PageEngine.plan_experiment(data, config)
-
-        # Render the new experiment pages
-        cls._render_experiment_pages(doc, plan, data, config)
-
-        # Save to output_path (never overwriting original)
-        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-        doc.save(output_path)
-
-        # Verify original file was strictly untouched
-        with open(original_path, "rb") as f:
-            original_hash_after = hashlib.sha256(f.read()).hexdigest()
-
-        if original_hash_before != original_hash_after:
-            raise RuntimeError("CRITICAL INTEGRITY FAILURE: Original document was modified during continuation!")
-
-        return output_path

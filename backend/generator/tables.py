@@ -50,7 +50,7 @@ def apply_cell_border(cell, **kwargs):
 class TableManager:
     @staticmethod
     def create_header_table(doc: docx.Document, data: ExperimentData, config: TemplateConfig):
-        """Creates the 2x2 Header Table with accurate styling, borders, and fixed column widths."""
+        """Creates the compact Header Table matching the exact reference template dimensions."""
         tbl = doc.add_table(rows=2, cols=2)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.autofit = False
@@ -62,9 +62,9 @@ class TableManager:
             tblPr.remove(tblLayout)
         tblPr.append(parse_xml(f'<w:tblLayout {nsdecls("w")} w:type="fixed"/>'))
 
-        # Set table grid: Col 0 = 2.0" (2880 dxa), Col 1 = 4.77" (6868 dxa)
+        # Set table grid: Col 0 = 2.0" (2880 dxa), Col 1 = 4.77" (6869 dxa) -> Total 9749 dxa
         col0_dxa = 2880
-        col1_dxa = 6868
+        col1_dxa = 6869
         tblGrid = parse_xml(f"""
             <w:tblGrid {nsdecls('w')}>
                 <w:gridCol w:w="{col0_dxa}"/>
@@ -73,62 +73,60 @@ class TableManager:
         """)
         tbl._tbl.append(tblGrid)
 
-        # Row 0: Ex No & Title
         c00 = tbl.cell(0, 0)
+        c01 = tbl.cell(0, 1)
+        c10 = tbl.cell(1, 0)
+        c11 = tbl.cell(1, 1)
+
+        # Merge right column cells so the title spans both rows vertically
+        right_cell = c01.merge(c11)
+
+        # Cell (0, 0): EX NO
         set_cell_width(c00, col0_dxa)
         set_cell_v_align(c00, "center")
         apply_cell_border(c00)
         p00 = c00.paragraphs[0]
-        p00.paragraph_format.space_before = Pt(4)
-        p00.paragraph_format.space_after = Pt(4)
+        p00.paragraph_format.space_before = Pt(3)
+        p00.paragraph_format.space_after = Pt(3)
+        p00.paragraph_format.line_spacing = 1.0
         r00 = p00.add_run(f"EX NO:{data.experiment_number}")
-        r00.font.name = config.font_family
+        r00.font.name = "Times New Roman"
         r00.font.size = Pt(11)
         r00.font.bold = True
 
-        c01 = tbl.cell(0, 1)
-        set_cell_width(c01, col1_dxa)
-        set_cell_v_align(c01, "center")
-        apply_cell_border(c01)
-        p01 = c01.paragraphs[0]
-        p01.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p01.paragraph_format.space_before = Pt(4)
-        p01.paragraph_format.space_after = Pt(2)
-        r01 = p01.add_run(data.title.upper())
-        r01.font.name = config.font_family
-        r01.font.size = Pt(config.title_font_size)
-        r01.font.bold = True
-
-        # Row 1: Date & Subtitle
-        c10 = tbl.cell(1, 0)
+        # Cell (1, 0): DATE
         set_cell_width(c10, col0_dxa)
         set_cell_v_align(c10, "center")
         apply_cell_border(c10)
         p10 = c10.paragraphs[0]
-        p10.paragraph_format.space_before = Pt(4)
-        p10.paragraph_format.space_after = Pt(4)
-        r10 = p10.add_run(f"DATE:{data.date or ''}")
-        r10.font.name = config.font_family
+        p10.paragraph_format.space_before = Pt(3)
+        p10.paragraph_format.space_after = Pt(3)
+        p10.paragraph_format.line_spacing = 1.0
+        date_str = data.date or ""
+        r10 = p10.add_run(f"DATE:{date_str}")
+        r10.font.name = "Times New Roman"
         r10.font.size = Pt(11)
         r10.font.bold = True
 
-        c11 = tbl.cell(1, 1)
-        set_cell_width(c11, col1_dxa)
-        set_cell_v_align(c11, "center")
-        apply_cell_border(c11)
-        p11 = c11.paragraphs[0]
-        p11.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p11.paragraph_format.space_before = Pt(2)
-        p11.paragraph_format.space_after = Pt(4)
-        subtitle_text = data.subtitle.upper() if data.subtitle else ""
-        r11 = p11.add_run(subtitle_text)
-        r11.font.name = config.font_family
-        r11.font.size = Pt(config.title_font_size)
-        r11.font.bold = True
+        # Merged Right Cell: TITLE
+        set_cell_width(right_cell, col1_dxa)
+        set_cell_v_align(right_cell, "center")
+        apply_cell_border(right_cell)
+        p_title = right_cell.paragraphs[0]
+        p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_title.paragraph_format.space_before = Pt(4)
+        p_title.paragraph_format.space_after = Pt(4)
+        p_title.paragraph_format.line_spacing = 1.15
 
-        p_spacer = doc.add_paragraph()
-        p_spacer.paragraph_format.space_before = Pt(4)
-        p_spacer.paragraph_format.space_after = Pt(4)
+        title_text = data.title.strip()
+        if data.subtitle and data.subtitle.strip() and data.subtitle.strip().upper() != title_text.upper():
+            title_text = f"{title_text}\n{data.subtitle.strip()}"
+
+        r_title = p_title.add_run(title_text)
+        r_title.font.name = "Times New Roman"
+        r_title.font.size = Pt(14)
+        r_title.font.bold = True
+
         return tbl
 
     @staticmethod

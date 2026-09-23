@@ -23,7 +23,11 @@ try:
         ValidationReport,
         Draft,
         AiAssistRequest,
-        AiAssistResponse
+        AiAssistResponse,
+        WorkspaceGenerationRequest,
+        WorkspacePreviewRequest,
+        WorkspacePreviewResponse,
+        PagePreviewData
     )
     from .template.analyzer import TemplateAnalyzer
     from .template.template_store import TemplateStore
@@ -43,7 +47,11 @@ except (ImportError, ValueError):
         ValidationReport,
         Draft,
         AiAssistRequest,
-        AiAssistResponse
+        AiAssistResponse,
+        WorkspaceGenerationRequest,
+        WorkspacePreviewRequest,
+        WorkspacePreviewResponse,
+        PagePreviewData
     )
     from backend.template.analyzer import TemplateAnalyzer
     from backend.template.template_store import TemplateStore
@@ -237,6 +245,81 @@ def continue_record(req: ContinuationRequest):
         experiment_number=exp.experiment_number,
         total_pages_estimated=4,
         is_continuation=True,
+        warnings=all_warnings
+    )
+
+@app.post("/api/record/preview-workspace", response_model=WorkspacePreviewResponse)
+def preview_workspace(req: WorkspacePreviewRequest):
+    """
+    Returns complete page-by-page layout data for all experiments in the workspace,
+    enabling a true document preview matching the generated Word output.
+    """
+    if not req.experiments:
+        raise HTTPException(status_code=400, detail="No experiments provided.")
+
+    tmpl = template_store.get_template(req.template_id or "python_lab_reference")
+    pages = PageEngine.plan_workspace(req.experiments, tmpl)
+
+    return WorkspacePreviewResponse(
+        success=True,
+        total_experiments=len(req.experiments),
+        total_pages=len(pages),
+        pages=pages
+    )
+
+@app.post("/api/record/generate-workspace", response_model=GenerationResponse)
+def generate_workspace(req: WorkspaceGenerationRequest):
+    """
+    Generates a single combined laboratory record DOCX containing all experiments
+    in the workspace in user-defined order.
+    """
+    if not req.experiments:
+        raise HTTPException(status_code=400, detail="No experiments provided for document generation.")
+
+    tmpl = template_store.get_template(req.template_id or "python_lab_reference")
+
+    original_path = None
+    is_continuation = False
+    if req.original_filename:
+        original_path = os.path.join(UPLOAD_DIR, req.original_filename)
+        if not os.path.exists(original_path):
+            ref_path = os.path.join(BASE_DIR, "templates", "saved_templates", req.original_filename)
+            if os.path.exists(ref_path):
+                original_path = ref_path
+            else:
+                raise HTTPException(status_code=404, detail=f"Original document not found: {req.original_filename}")
+        is_continuation = True
+
+    first_exp = req.experiments[0]
+    last_exp = req.experiments[-1]
+    if len(req.experiments) == 1:
+        clean_num = first_exp.experiment_number.replace(".", "_").replace(" ", "_")
+        output_filename = f"Lab_Record_Exp_{clean_num}_{uuid.uuid4().hex[:6]}.docx"
+    else:
+        clean_first = first_exp.experiment_number.replace(".", "_").replace(" ", "_")
+        clean_last = last_exp.experiment_number.replace(".", "_").replace(" ", "_")
+        output_filename = f"Lab_Record_Exps_{clean_first}_to_{clean_last}_{uuid.uuid4().hex[:6]}.docx"
+
+    output_path = os.path.join(GENERATED_DIR, output_filename)
+    DocxGenerator.generate_workspace_record(req.experiments, tmpl, output_path, original_path=original_path)
+
+    # Validate output against first experiment
+    val_report = PageChecker.validate_document(output_path, first_exp)
+    file_exists = os.path.exists(output_path) and os.path.getsize(output_path) > 0
+    all_warnings = list(val_report.warnings)
+    if not val_report.is_valid:
+        all_warnings.extend(val_report.errors)
+
+    total_pages_est = len(req.experiments) * 4
+
+    return GenerationResponse(
+        success=file_exists,
+        filename=output_filename,
+        download_url=f"/api/download/{output_filename}",
+        message=f"Multi-experiment laboratory record ({len(req.experiments)} experiments, {total_pages_est} pages) successfully generated.",
+        experiment_number=f"{first_exp.experiment_number} - {last_exp.experiment_number}" if len(req.experiments) > 1 else first_exp.experiment_number,
+        total_pages_estimated=total_pages_est,
+        is_continuation=is_continuation,
         warnings=all_warnings
     )
 

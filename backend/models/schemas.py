@@ -115,3 +115,71 @@ class AiAssistResponse(BaseModel):
     field: str
     suggestions: List[AiSuggestionItem] = Field(default_factory=list)
     message: Optional[str] = None
+
+class WorkspaceExperiment(BaseModel):
+    id: str
+    experiment_number: str
+    title: str
+    subtitle: Optional[str] = ""
+    date: Optional[str] = ""
+    aim: str
+    procedure_heading: Optional[str] = "ALGORITHM"
+    algorithm: str
+    code_heading: Optional[str] = "CODING"
+    coding: str
+    output: Optional[str] = ""
+    output_images: Optional[List[str]] = Field(default_factory=list)
+    result: str
+    student_name: Optional[str] = "ADARSH MENON"
+    register_number: Optional[str] = "714025247005"
+    status: str = "Saved"
+    last_saved: Optional[str] = None
+
+class WorkspaceGenerationRequest(BaseModel):
+    experiments: List[ExperimentData]
+    template_id: Optional[str] = "python_lab_reference"
+    original_filename: Optional[str] = None
+
+class WorkspacePreviewRequest(BaseModel):
+    experiments: List[ExperimentData]
+    template_id: Optional[str] = "python_lab_reference"
+    original_filename: Optional[str] = None
+
+class PagePreviewData(BaseModel):
+    page_number: int
+    total_pages: int
+    experiment_number: Optional[str] = None
+    experiment_title: Optional[str] = None
+    page_type: str  # "EXP_START", "OUTPUT", "EXP_CONT", "BLANK_BACK", "EXISTING_PAGE"
+    side: str  # "RIGHT" or "LEFT"
+    is_blank: bool = False
+    has_header_table: bool = False
+    header_ex_no: Optional[str] = None
+    header_date: Optional[str] = None
+    header_title: Optional[str] = None
+    header_subtitle: Optional[str] = None
+    aim_heading: Optional[str] = None
+    aim_text: Optional[str] = None
+    procedure_heading: Optional[str] = None
+    algorithm_steps: List[str] = Field(default_factory=list)
+    code_heading: Optional[str] = None
+    code_lines: List[str] = Field(default_factory=list)
+    output_heading: Optional[str] = None
+    output_lines: List[str] = Field(default_factory=list)
+    output_images: List[str] = Field(default_factory=list)
+    has_evaluation_table: bool = False
+    result_heading: Optional[str] = None
+    result_text: Optional[str] = None
+    footer_left: Optional[str] = None
+    footer_right: Optional[str] = None
+    page_width_mm: float = 210.0
+    page_height_mm: float = 297.0
+    margins_in: Dict[str, float] = Field(default_factory=lambda: {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75})
+    has_border: bool = True
+
+class WorkspacePreviewResponse(BaseModel):
+    success: bool
+    total_experiments: int
+    total_pages: int
+    pages: List[PagePreviewData]
+    validation_report: Optional[ValidationReport] = None

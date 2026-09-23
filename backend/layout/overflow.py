@@ -6,16 +6,16 @@ from typing import List, Tuple
 
 class OverflowHandler:
     PAGE_HEIGHT_PT = 734.0  # Usable height on A4 with 0.75" margins
-    HEADER_TABLE_PT = 85.0
+    HEADER_TABLE_PT = 65.0  # Compact header table
     AIM_ESTIMATE_PT = 55.0
-    ALGO_HEADING_PT = 24.0
-    ALGO_STEP_PT = 18.0
-    CODE_HEADING_PT = 24.0
-    CODE_LINE_PT = 14.0
+    ALGO_HEADING_PT = 26.0  # 14pt bold heading
+    ALGO_STEP_PT = 19.5     # 12pt body font
+    CODE_HEADING_PT = 26.0  # 14pt bold heading
+    CODE_LINE_PT = 14.5     # 12pt Times New Roman code line
     EVAL_TABLE_PT = 115.0
     RESULT_ESTIMATE_PT = 55.0
-    OUTPUT_HEADING_PT = 24.0
-    OUTPUT_LINE_PT = 15.0
+    OUTPUT_HEADING_PT = 26.0 # 14pt bold heading
+    OUTPUT_LINE_PT = 15.5   # 12pt Times New Roman output line
 
     @classmethod
     def calculate_code_split(cls, code_lines: List[str], algo_steps_count: int, aim_text: str) -> Tuple[List[str], List[str]]:
