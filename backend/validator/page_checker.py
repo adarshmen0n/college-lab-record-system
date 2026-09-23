@@ -24,12 +24,14 @@ class PageChecker:
             "has_header_table": False,
             "has_evaluation_table": False,
             "has_aim": False,
-            "has_algorithm": False,
+            "has_procedure": False,
             "has_coding": False,
             "has_output": False,
             "has_result": False,
             "has_page_borders": False,
             "has_footers": False,
+            "coding_font_is_times_new_roman": True,
+            "coding_size_is_12pt": True,
             "experiment_number_matches": True
         }
         errors: List[str] = []
@@ -63,20 +65,56 @@ class PageChecker:
             if "PROGRAM AND EXECUTION" in tbl_txt or "CLASS PERFORMANCE" in tbl_txt or "VIVA" in tbl_txt:
                 checks["has_evaluation_table"] = True
 
-        # 3. Check Paragraphs for Headings
+        # 3. Check Paragraphs for Generalized Headings
         all_p_text = " ".join([p.text.strip().upper() for p in doc.paragraphs])
         if "AIM:" in all_p_text or "AIM" in all_p_text:
             checks["has_aim"] = True
-        if "ALGORITHM:" in all_p_text or "ALGORITHM" in all_p_text:
-            checks["has_algorithm"] = True
-        if "CODING:" in all_p_text or "CODING" in all_p_text or "PROGRAM:" in all_p_text:
+
+        proc_headings = ["ALGORITHM", "PROCEDURE", "METHODOLOGY", "STEPS"]
+        if expected_exp and expected_exp.procedure_heading:
+            proc_headings.append(expected_exp.procedure_heading.strip().upper())
+        if any(h in all_p_text for h in proc_headings):
+            checks["has_procedure"] = True
+
+        code_headings = [
+            "CODING", "PROGRAM", "SQL QUERY", "SQL QUERIES", "COMMANDS",
+            "SHELL SCRIPT", "SOURCE CODE", "QUERY", "QUERIES", "CODE"
+        ]
+        if expected_exp and expected_exp.code_heading:
+            code_headings.append(expected_exp.code_heading.strip().upper())
+        if any(h in all_p_text for h in code_headings):
             checks["has_coding"] = True
+
         if "OUTPUT:" in all_p_text or "OUTPUT" in all_p_text:
             checks["has_output"] = True
         if "RESULT:" in all_p_text or "RESULT" in all_p_text:
             checks["has_result"] = True
 
-        # 4. Check Experiment Number Match if specified
+        # 4. Check Coding Font & Size (Times New Roman 12pt)
+        # Scan paragraphs after CODING/PROGRAM/SQL heading up to RESULT/Evaluation table
+        in_code_section = False
+        for p in doc.paragraphs:
+            txt = p.text.strip().upper()
+            if any(h in txt for h in code_headings):
+                in_code_section = True
+                continue
+            if in_code_section and any(h in txt for h in ["RESULT:", "OUTPUT:"]):
+                in_code_section = False
+                continue
+
+            if in_code_section and p.runs:
+                for r in p.runs:
+                    if r.text.strip():
+                        if r.font.name and "Times" not in r.font.name:
+                            checks["coding_font_is_times_new_roman"] = False
+                            warnings.append(f"Coding font was '{r.font.name}' instead of Times New Roman.")
+                            break
+                        if r.font.size and round(r.font.size.pt) != 12:
+                            checks["coding_size_is_12pt"] = False
+                            warnings.append(f"Coding size was {r.font.size.pt}pt instead of 12pt.")
+                            break
+
+        # 5. Check Experiment Number Match if specified
         if expected_exp:
             exp_num = expected_exp.experiment_number.strip().upper()
             combined_search = all_tables_text + " " + all_p_text
@@ -96,7 +134,7 @@ class PageChecker:
             errors.append("Master evaluation table missing from document.")
         elif not checks["has_aim"] or not checks["has_coding"] or not checks["has_result"]:
             is_valid = False
-            errors.append("Core academic sections (Aim, Coding, or Result) missing.")
+            errors.append("Core academic sections (Aim, Coding/Program, or Result) missing.")
         else:
             is_valid = True
 

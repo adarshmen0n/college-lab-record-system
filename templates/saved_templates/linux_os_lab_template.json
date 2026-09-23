@@ -1,8 +1,8 @@
 {
-  "id": "python_lab_reference",
-  "name": "Python & AI/ML Lab Template",
-  "description": "Artificial Intelligence & Python programming record",
-  "subject": "Python / AIML",
+  "id": "linux_os_lab_template",
+  "name": "Linux & Operating Systems Lab",
+  "description": "Shell commands, system calls, process scheduling, and OS record",
+  "subject": "Linux / OS",
   "page_size": {
     "width": 8.27,
     "height": 11.69

@@ -1,8 +1,8 @@
 {
-  "id": "python_lab_reference",
-  "name": "Python & AI/ML Lab Template",
-  "description": "Artificial Intelligence & Python programming record",
-  "subject": "Python / AIML",
+  "id": "c_cpp_lab_template",
+  "name": "C / C++ & Data Structures Lab",
+  "description": "Systems programming, C/C++, and Data Structures record",
+  "subject": "C / C++",
   "page_size": {
     "width": 8.27,
     "height": 11.69

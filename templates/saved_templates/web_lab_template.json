@@ -1,8 +1,8 @@
 {
-  "id": "python_lab_reference",
-  "name": "Python & AI/ML Lab Template",
-  "description": "Artificial Intelligence & Python programming record",
-  "subject": "Python / AIML",
+  "id": "web_lab_template",
+  "name": "Web Development Lab Template",
+  "description": "Full-stack HTML, CSS, JavaScript, and Web Technologies record",
+  "subject": "Web Dev",
   "page_size": {
     "width": 8.27,
     "height": 11.69

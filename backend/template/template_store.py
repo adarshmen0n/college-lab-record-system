@@ -1,6 +1,6 @@
 """
 Template Store: Handles template persistence, calibration, multi-template libraries,
-and template mismatch detection.
+and template mismatch detection across general engineering laboratory domains.
 """
 import os
 import json
@@ -20,16 +20,35 @@ class TemplateStore:
         self._load_built_ins()
 
     def _load_built_ins(self):
-        """Loads reference template and any pre-existing JSON templates."""
+        """Loads reference template and populates multi-subject domain presets."""
         ref_docx = os.path.join(self.storage_dir, "AI_ML_Python_Lab_Record_Reference.docx")
+        base_tmpl = None
         if os.path.exists(ref_docx):
             result = TemplateAnalyzer.analyze_docx(ref_docx)
             if result.success and result.template_config:
-                tmpl = result.template_config
-                tmpl.id = "python_lab_reference"
-                tmpl.name = "Python / AI-ML Lab Record Template"
-                tmpl.description = "Reference Anna University / College format with facing Output pages & Marks table"
-                self.save_template(tmpl)
+                base_tmpl = result.template_config
+
+        # Standard multi-subject templates
+        presets = [
+            ("python_lab_reference", "Python & AI/ML Lab Template", "Artificial Intelligence & Python programming record", "Python / AIML"),
+            ("java_lab_template", "Java & OOP Lab Template", "Object-Oriented Programming and Java laboratory record", "Java"),
+            ("c_cpp_lab_template", "C / C++ & Data Structures Lab", "Systems programming, C/C++, and Data Structures record", "C / C++"),
+            ("dbms_lab_template", "DBMS & SQL Laboratory Template", "Relational database management, SQL queries, and normalization", "DBMS / SQL"),
+            ("linux_os_lab_template", "Linux & Operating Systems Lab", "Shell commands, system calls, process scheduling, and OS record", "Linux / OS"),
+            ("networks_lab_template", "Computer Networks & IoT Lab", "Network topology, packet simulation, socket programming, and IoT", "Networks"),
+            ("web_lab_template", "Web Development Lab Template", "Full-stack HTML, CSS, JavaScript, and Web Technologies record", "Web Dev")
+        ]
+
+        for tid, tname, tdesc, tsubj in presets:
+            t_obj = base_tmpl.model_copy() if base_tmpl else TemplateConfig()
+            t_obj.id = tid
+            t_obj.name = tname
+            t_obj.description = tdesc
+            t_obj.subject = tsubj
+            t_obj.font_family = "Times New Roman"
+            t_obj.code_font_family = "Times New Roman"
+            t_obj.code_font_size = 12
+            self.save_template(t_obj)
 
         # Scan for existing JSON templates
         for fname in os.listdir(self.storage_dir):

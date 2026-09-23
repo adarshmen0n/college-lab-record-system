@@ -90,6 +90,7 @@ class DocxGenerator:
     @staticmethod
     def _add_body_paragraph(doc, text: str, font_family: str, font_size: int = 11):
         p = doc.add_paragraph()
+        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_before = Pt(2)
         p.paragraph_format.space_after = Pt(6)
         p.paragraph_format.line_spacing = 1.15
@@ -102,6 +103,7 @@ class DocxGenerator:
     def _add_algorithm_steps(doc, steps: List[str], font_family: str):
         for idx, step in enumerate(steps, 1):
             p = doc.add_paragraph()
+            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             p.paragraph_format.left_indent = Inches(0.4)
             p.paragraph_format.space_before = Pt(2)
             p.paragraph_format.space_after = Pt(3)
@@ -111,20 +113,23 @@ class DocxGenerator:
             run.font.size = Pt(11)
 
     @staticmethod
-    def _add_code_block(doc, code_lines: List[str], code_font: str = "Courier New", font_size: int = 10):
+    def _add_code_block(doc, code_lines: List[str], code_font: str = "Times New Roman", font_size: int = 12):
         for line in code_lines:
             p = doc.add_paragraph()
+            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(0)
             p.paragraph_format.line_spacing = 1.05
             run = p.add_run(line if line else " ")
-            run.font.name = code_font
-            run.font.size = Pt(font_size)
+            # Strictly enforce Times New Roman 12 pt for all technical content
+            run.font.name = "Times New Roman"
+            run.font.size = Pt(12)
 
     @staticmethod
     def _add_output_block(doc, output_lines: List[str], font_family: str = "Times New Roman"):
         for line in output_lines:
             p = doc.add_paragraph()
+            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(2)
             p.paragraph_format.line_spacing = 1.1
@@ -161,16 +166,19 @@ class DocxGenerator:
     @classmethod
     def _render_experiment_pages(cls, doc: docx.Document, plan: ExperimentLayoutPlan, data: ExperimentData, config: TemplateConfig):
         """Renders the planned pages into the docx Document."""
+        proc_heading = f"{data.procedure_heading or 'ALGORITHM'}:"
+        code_heading = f"{data.code_heading or 'CODING'}:"
+
         for i, page in enumerate(plan.pages):
             if page.page_type == "EXP_START":
-                # Page 1 (Right): Header Table, Aim, Algorithm, Code Part 1
+                # Page 1 (Right): Header Table, Aim, Algorithm/Procedure, Code/Commands Part 1
                 TableManager.create_header_table(doc, data, config)
                 cls._add_heading(doc, "AIM:", config.font_family, config.heading_font_size)
                 cls._add_body_paragraph(doc, data.aim, config.font_family, config.body_font_size)
-                cls._add_heading(doc, "ALGORITHM:", config.font_family, config.heading_font_size)
+                cls._add_heading(doc, proc_heading, config.font_family, config.heading_font_size)
                 cls._add_algorithm_steps(doc, page.algorithm_steps, config.font_family)
-                cls._add_heading(doc, "CODING:", config.font_family, config.heading_font_size)
-                cls._add_code_block(doc, page.code_lines, config.code_font_family, config.code_font_size)
+                cls._add_heading(doc, code_heading, config.font_family, config.heading_font_size)
+                cls._add_code_block(doc, page.code_lines, "Times New Roman", 12)
 
             elif page.page_type == "OUTPUT":
                 # Page 2 (Left): OUTPUT
@@ -183,7 +191,7 @@ class DocxGenerator:
             elif page.page_type == "EXP_CONT":
                 # Page 3 (Right): Code continuation, Evaluation Table, Result
                 if page.code_lines:
-                    cls._add_code_block(doc, page.code_lines, config.code_font_family, config.code_font_size)
+                    cls._add_code_block(doc, page.code_lines, "Times New Roman", 12)
                     p_spacer = doc.add_paragraph()
                     p_spacer.paragraph_format.space_before = Pt(6)
 

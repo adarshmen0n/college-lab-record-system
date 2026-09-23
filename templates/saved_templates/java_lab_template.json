@@ -1,8 +1,8 @@
 {
-  "id": "python_lab_reference",
-  "name": "Python & AI/ML Lab Template",
-  "description": "Artificial Intelligence & Python programming record",
-  "subject": "Python / AIML",
+  "id": "java_lab_template",
+  "name": "Java & OOP Lab Template",
+  "description": "Object-Oriented Programming and Java laboratory record",
+  "subject": "Java",
   "page_size": {
     "width": 8.27,
     "height": 11.69

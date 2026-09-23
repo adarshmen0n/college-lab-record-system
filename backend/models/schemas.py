@@ -10,11 +10,14 @@ class ExperimentData(BaseModel):
     subtitle: Optional[str] = Field("", description="Optional experiment subtitle or topic (e.g. 'TUPLE COMPREHENSION')")
     date: Optional[str] = Field("", description="Date of experiment (e.g. '23-09-2026')")
     aim: str = Field(..., description="Aim / Objective of the experiment")
-    algorithm: str = Field(..., description="Algorithm steps (numbered, multiline, or bulleted)")
-    coding: str = Field(..., description="Source code or program listing (indentation preserved)")
-    output: Optional[str] = Field("", description="Program execution output text")
+    procedure_heading: Optional[str] = Field("ALGORITHM", description="Procedure heading: ALGORITHM, PROCEDURE, METHODOLOGY")
+    algorithm: str = Field(..., description="Algorithm or procedure steps (numbered, multiline, or bulleted)")
+    code_heading: Optional[str] = Field("CODING", description="Code/Command heading: CODING, PROGRAM, SQL QUERY, COMMANDS")
+    coding: str = Field(..., description="Source code, queries, or command listing (indentation preserved)")
+    output: Optional[str] = Field("", description="Execution output or terminal log text")
     output_images: Optional[List[str]] = Field(default_factory=list, description="Base64 encoded strings or file paths of output screenshots")
     result: str = Field(..., description="Result statement")
+    subject: Optional[str] = Field("General", description="Subject domain: Python, Java, C/C++, DBMS, Linux, Networks, AIML, etc.")
     student_name: Optional[str] = Field("ADARSH MENON", description="Student Name for footer")
     register_number: Optional[str] = Field("714025247005", description="Register / Roll Number for footer")
 
@@ -29,18 +32,19 @@ class PageDimensions(BaseModel):
     height: float = 11.69
 
 class TemplateConfig(BaseModel):
-    id: str = "python_lab_reference"
-    name: str = "Python / AI-ML Lab Record Template"
+    id: str = "general_lab_reference"
+    name: str = "General College Lab Record Template"
     description: Optional[str] = "Standard university format with facing Output/Experiment pages and Evaluation table"
+    subject: str = "General"
     page_size: PageDimensions = Field(default_factory=PageDimensions)
     margins: MarginConfig = Field(default_factory=MarginConfig)
     has_page_border: bool = True
     font_family: str = "Times New Roman"
-    code_font_family: str = "Courier New"
+    code_font_family: str = "Times New Roman"
     title_font_size: int = 12
     heading_font_size: int = 12
     body_font_size: int = 11
-    code_font_size: int = 10
+    code_font_size: int = 12
     header_table_xml: Optional[str] = None
     evaluation_table_xml: Optional[str] = None
     footer_left: Optional[str] = "ADARSH MENON"

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>College Lab Record Automation System</title>
+  <title>RECORDEXT - College Laboratory Record Automation System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Times+New+Roman&display=swap" rel="stylesheet">
@@ -14,10 +14,10 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <div class="brand-icon">📑</div>
+        <div class="brand-icon">📚</div>
         <div>
-          <h1>College Lab Record Automation</h1>
-          <p class="tagline">Template-Aware Academic Document Engine • Facing-Pages Layout • Zero Format Errors</p>
+          <h1>RECORDEXT</h1>
+          <p class="tagline">Enterprise College Laboratory Record Automation System • Multi-Subject Support • Facing-Pages Layout • Pixel-Perfect DOCX</p>
         </div>
       </div>
       <div class="header-badges">
@@ -129,6 +129,35 @@
             </div>
           </div>
           <div class="card-body">
+            <!-- Subject Selection & Dynamic Headings -->
+            <div class="form-row">
+              <div class="form-group col-12">
+                <label for="exp-subject">Laboratory Subject / Domain</label>
+                <select id="exp-subject" class="form-control highlight-input">
+                  <option value="python" selected>🐍 Python / AI & Machine Learning Laboratory</option>
+                  <option value="java">☕ Java Programming Laboratory</option>
+                  <option value="cpp">⚡ C / C++ Data Structures & Algorithms</option>
+                  <option value="dbms">🗄️ DBMS / SQL Relational Database Laboratory</option>
+                  <option value="linux">🐧 Linux Systems Programming & Shell Scripting</option>
+                  <option value="networks">🌐 Computer Networks Laboratory</option>
+                  <option value="web">💻 Web Technologies & Full-Stack Laboratory</option>
+                  <option value="custom">🛠️ Custom Subject / Laboratory</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Dynamic Section Headings -->
+            <div class="form-row">
+              <div class="form-group col-6">
+                <label for="exp-proc-heading">Procedure Section Heading</label>
+                <input type="text" id="exp-proc-heading" class="form-control" value="ALGORITHM" placeholder="e.g. ALGORITHM or PROCEDURE">
+              </div>
+              <div class="form-group col-6">
+                <label for="exp-code-heading">Code Section Heading</label>
+                <input type="text" id="exp-code-heading" class="form-control" value="CODING" placeholder="e.g. CODING, PROGRAM, or SQL QUERIES">
+              </div>
+            </div>
+
             <!-- Row 1: Exp Number & Date -->
             <div class="form-row">
               <div class="form-group col-6">
@@ -175,10 +204,10 @@
               <textarea id="exp-aim" class="form-control" rows="3" placeholder="To implement..."></textarea>
             </div>
 
-            <!-- ALGORITHM -->
+            <!-- PROCEDURE / ALGORITHM -->
             <div class="form-group">
               <div class="label-with-action">
-                <label for="exp-algo">ALGORITHM <span class="required">*</span></label>
+                <label for="exp-algo"><span id="lbl-proc-heading">ALGORITHM</span> <span class="required">*</span></label>
                 <button class="btn-link-action" id="btn-ai-algo">✨ Format Steps</button>
               </div>
               <textarea id="exp-algo" class="form-control font-serif" rows="5" placeholder="1. Start the program&#10;2. Define parameters..."></textarea>
@@ -187,11 +216,11 @@
             <!-- CODING / PROGRAM -->
             <div class="form-group">
               <div class="label-with-action">
-                <label for="exp-code">CODING / PROGRAM <span class="required">*</span></label>
+                <label for="exp-code"><span id="lbl-code-heading">CODING</span> <span class="required">*</span></label>
                 <button class="btn-link-action" id="btn-ai-code">✨ Normalize Indentation (4-Spaces)</button>
               </div>
-              <textarea id="exp-code" class="form-control code-editor" rows="9" placeholder="def solution():&#10;    # Write program here with indentation preserved"></textarea>
-              <small class="form-hint">Indentation and line breaks are strictly preserved in Courier New monospace.</small>
+              <textarea id="exp-code" class="form-control code-editor font-serif" rows="9" placeholder="def solution():&#10;    # Write program here with indentation preserved"></textarea>
+              <small class="form-hint">Indentation and line breaks are strictly preserved. Rendered in Times New Roman 12 pt in the document.</small>
             </div>
 
             <!-- OUTPUT SECTION -->
@@ -273,12 +302,17 @@
               <p>Dual-page layout as bound in physical college laboratory records</p>
             </div>
             <div class="preview-controls">
-              <span class="spread-indicator">Facing Pages (Left: Output | Right: Experiment)</span>
+              <div class="view-mode-toggle" id="view-mode-toggle">
+                <button class="view-btn active" data-view="spread" title="Side-by-Side Facing Pages">📖 Spread</button>
+                <button class="view-btn" data-view="left" title="Left Page (Output)">📄 Left</button>
+                <button class="view-btn" data-view="right" title="Right Page (Exp)">📄 Right</button>
+                <button class="view-btn" data-view="stacked" title="Stacked View">📑 Stacked</button>
+              </div>
             </div>
           </div>
 
           <!-- Facing Pages Book Spread Container -->
-          <div class="book-spread-container">
+          <div class="book-spread-container" id="book-spread-container">
             <!-- LEFT PAGE: OUTPUT -->
             <div class="sheet-page sheet-left" id="sheet-left">
               <div class="page-inner-border">
@@ -322,15 +356,15 @@
                   <h4 class="preview-heading">AIM:</h4>
                   <p class="preview-text" id="prev-aim">To create a generator using generator comprehension and iterate over elements using functions.</p>
 
-                  <h4 class="preview-heading">ALGORITHM:</h4>
+                  <h4 class="preview-heading"><span id="prev-proc-heading">ALGORITHM</span>:</h4>
                   <ol class="preview-list" id="prev-algo">
                     <li>Define generator function.</li>
                     <li>Yield square numbers.</li>
                     <li>Display results.</li>
                   </ol>
 
-                  <h4 class="preview-heading">CODING:</h4>
-                  <pre class="preview-code" id="prev-code">def gen_squares(n):
+                  <h4 class="preview-heading"><span id="prev-code-heading">CODING</span>:</h4>
+                  <pre class="preview-code font-serif" id="prev-code">def gen_squares(n):
     return (x**2 for x in range(n))
 
 for val in gen_squares(5):
@@ -381,6 +415,8 @@ for val in gen_squares(5):
         </div>
       </section>
     </div>
+    <!-- Floating Mobile Preview Button -->
+    <button class="floating-preview-btn" id="btn-floating-preview" aria-label="Jump to Preview">👁 Preview Document</button>
   </main>
 
   <!-- AI Review Modal -->

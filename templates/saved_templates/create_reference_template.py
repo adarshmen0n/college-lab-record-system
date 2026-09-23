@@ -89,20 +89,43 @@ def add_header_table(doc, ex_no, date, title, subtitle):
     return tbl
 
 def add_evaluation_table(doc):
-    """Creates the 4-row Master Evaluation Marks Table."""
+    """Creates the 4-row Master Evaluation Marks Table with fixed layout and grid."""
     tbl = doc.add_table(rows=4, cols=2)
     tbl.alignment = WD_TABLE_ALIGNMENT.RIGHT
     tbl.autofit = False
     
-    col_widths = [Inches(2.5), Inches(1.5)]
+    # Enforce fixed table layout in tblPr
+    tblPr = tbl._tbl.tblPr
+    tblLayout = tblPr.find(qn('w:tblLayout'))
+    if tblLayout is not None:
+        tblPr.remove(tblLayout)
+    tblPr.append(parse_xml(f'<w:tblLayout {nsdecls("w")} w:type="fixed"/>'))
+
+    # Explicit table grid
+    col0_dxa = 3600  # 2.5 inches
+    col1_dxa = 2160  # 1.5 inches (External marks column)
+    tblGrid = parse_xml(f"""
+        <w:tblGrid {nsdecls('w')}>
+            <w:gridCol w:w="{col0_dxa}"/>
+            <w:gridCol w:w="{col1_dxa}"/>
+        </w:tblGrid>
+    """)
+    existing_grid = tbl._tbl.find(qn('w:tblGrid'))
+    if existing_grid is not None:
+        tbl._tbl.remove(existing_grid)
+    tblPr.addnext(tblGrid)
+    
     labels = ["PROGRAM AND EXECUTION", "CLASS PERFORMANCE", "VIVA", "TOTAL"]
     
     for r_idx, label in enumerate(labels):
         row = tbl.rows[r_idx]
-        row.cells[0].width = col_widths[0]
-        row.cells[1].width = col_widths[1]
+        trPr = row._tr.get_or_add_trPr()
+        trPr.append(parse_xml(f'<w:trHeight {nsdecls("w")} w:val="400" w:hRule="atLeast"/>'))
         
         c0 = row.cells[0]
+        tcPr0 = c0._tc.get_or_add_tcPr()
+        tcPr0.append(parse_xml(f'<w:tcW {nsdecls("w")} w:w="{col0_dxa}" w:type="dxa"/>'))
+        tcPr0.append(parse_xml(f'<w:vAlign {nsdecls("w")} w:val="center"/>'))
         p0 = c0.paragraphs[0]
         p0.paragraph_format.space_before = Pt(3)
         p0.paragraph_format.space_after = Pt(3)
@@ -113,6 +136,9 @@ def add_evaluation_table(doc):
         apply_cell_border(c0)
         
         c1 = row.cells[1]
+        tcPr1 = c1._tc.get_or_add_tcPr()
+        tcPr1.append(parse_xml(f'<w:tcW {nsdecls("w")} w:w="{col1_dxa}" w:type="dxa"/>'))
+        tcPr1.append(parse_xml(f'<w:vAlign {nsdecls("w")} w:val="center"/>'))
         p1 = c1.paragraphs[0]
         p1.paragraph_format.space_before = Pt(3)
         p1.paragraph_format.space_after = Pt(3)
@@ -135,6 +161,7 @@ def add_heading(doc, text):
 
 def add_body_paragraph(doc, text):
     p = doc.add_paragraph()
+    p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     p.paragraph_format.space_before = Pt(2)
     p.paragraph_format.space_after = Pt(6)
     p.paragraph_format.line_spacing = 1.15
@@ -146,6 +173,7 @@ def add_body_paragraph(doc, text):
 def add_algorithm_steps(doc, steps):
     for idx, step in enumerate(steps, 1):
         p = doc.add_paragraph()
+        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.left_indent = Inches(0.4)
         p.paragraph_format.space_before = Pt(2)
         p.paragraph_format.space_after = Pt(3)
@@ -157,16 +185,18 @@ def add_algorithm_steps(doc, steps):
 def add_code_block(doc, code_lines):
     for line in code_lines:
         p = doc.add_paragraph()
+        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
         p.paragraph_format.line_spacing = 1.05
         run = p.add_run(line if line else " ")
-        run.font.name = "Courier New"
-        run.font.size = Pt(10)
+        run.font.name = "Times New Roman"
+        run.font.size = Pt(12)
 
 def add_output_block(doc, output_lines):
     for line in output_lines:
         p = doc.add_paragraph()
+        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(2)
         p.paragraph_format.line_spacing = 1.1

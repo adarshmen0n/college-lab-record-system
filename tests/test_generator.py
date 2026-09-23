@@ -134,3 +134,87 @@ def test_custom_and_nonsequential_experiment_numbers(tmp_path, base_template):
         val = PageChecker.validate_document(out_file, exp)
         assert val.is_valid is True
         assert val.checks["experiment_number_matches"] is True
+
+def test_code_font_and_size_enforcement(tmp_path, base_template):
+    from docx import Document
+    exp = ExperimentData(
+        experiment_number="5.A",
+        title="CODE FONT VERIFICATION",
+        aim="To verify code runs are strictly Times New Roman 12pt.",
+        algorithm="1. Verify font settings.",
+        coding="def check_font():\n    return 'Times New Roman 12pt'\ncheck_font()",
+        output="Times New Roman 12pt",
+        result="Font verified."
+    )
+    out_file = str(tmp_path / "exp_font_check.docx")
+    DocxGenerator.generate_new_record(exp, base_template, out_file)
+    assert os.path.exists(out_file)
+
+    doc = Document(out_file)
+    # Find paragraphs containing code
+    found_code_runs = 0
+    for p in doc.paragraphs:
+        for run in p.runs:
+            if "check_font" in run.text:
+                found_code_runs += 1
+                assert run.font.name == "Times New Roman"
+                assert run.font.size.pt == 12.0
+    assert found_code_runs > 0
+
+def test_evaluation_table_structure_and_fixed_grid(tmp_path, base_template):
+    from docx import Document
+    from docx.oxml.ns import qn
+    exp = ExperimentData(
+        experiment_number="6.A",
+        title="EVALUATION TABLE VERIFICATION",
+        aim="To verify locked column widths and fixed layout.",
+        algorithm="1. Inspect XML.",
+        coding="print('Table test')",
+        output="Table test",
+        result="Table structure verified."
+    )
+    out_file = str(tmp_path / "exp_eval_table.docx")
+    DocxGenerator.generate_new_record(exp, base_template, out_file)
+    doc = Document(out_file)
+
+    eval_tables = [t for t in doc.tables if len(t.rows) == 4 and "PROGRAM AND EXECUTION" in t.rows[0].cells[0].text]
+    assert len(eval_tables) >= 1
+    eval_tbl = eval_tables[0]
+
+    # Verify fixed layout in tblPr
+    tblPr = eval_tbl._tbl.tblPr
+    tblLayout = tblPr.find(qn('w:tblLayout'))
+    assert tblLayout is not None
+    assert tblLayout.get(qn('w:type')) == 'fixed'
+
+    # Verify tblGrid cols exist
+    tblGrid = eval_tbl._tbl.find(qn('w:tblGrid'))
+    assert tblGrid is not None
+    gridCols = tblGrid.findall(qn('w:gridCol'))
+    assert len(gridCols) == 2
+    assert gridCols[0].get(qn('w:w')) == '3600'
+    assert gridCols[1].get(qn('w:w')) == '2160'
+
+def test_multi_subject_generation(tmp_path, base_template):
+    from docx import Document
+    exp = ExperimentData(
+        experiment_number="3.A",
+        title="EMPLOYEE DATABASE QUERIES",
+        subtitle="SQL DDL & DML",
+        subject="dbms",
+        procedure_heading="PROCEDURE",
+        code_heading="SQL QUERIES",
+        aim="To create table and execute relational queries.",
+        algorithm="1. Create employee table.\n2. Insert records.\n3. Query results.",
+        coding="CREATE TABLE Employee (id INT PRIMARY KEY, name VARCHAR(50));\nSELECT * FROM Employee;",
+        output="id | name\n1  | Alice",
+        result="Queries executed successfully."
+    )
+    out_file = str(tmp_path / "exp_dbms.docx")
+    DocxGenerator.generate_new_record(exp, base_template, out_file)
+    assert os.path.exists(out_file)
+
+    doc = Document(out_file)
+    texts = [p.text for p in doc.paragraphs]
+    assert any("PROCEDURE:" in t for t in texts)
+    assert any("SQL QUERIES:" in t for t in texts)
