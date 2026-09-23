@@ -677,11 +677,7 @@ print(f"Sum: {total}")`,
       const border = document.createElement("div");
       border.className = "a4-page-border";
 
-      // Inner Printable Content
-      const content = document.createElement("div");
-      content.className = "a4-page-content";
-
-      // 1. Compact Header Table
+      // 1. Compact Header Table (Direct child of border - touches top, left, right border with 0 gaps)
       if (p.has_header_table) {
         const tbl = document.createElement("table");
         tbl.className = "preview-header-table";
@@ -702,8 +698,12 @@ print(f"Sum: {total}")`,
             <td class="cell-ex-date">DATE:${escapeHtml(p.header_date || "")}</td>
           </tr>
         `;
-        content.appendChild(tbl);
+        border.appendChild(tbl);
       }
+
+      // Inner Printable Content (Padded inside the border for AIM, ALGO, CODE, etc.)
+      const content = document.createElement("div");
+      content.className = "a4-page-content";
 
       // 2. AIM
       if (p.aim_heading && p.aim_text) {

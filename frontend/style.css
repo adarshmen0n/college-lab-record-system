@@ -913,44 +913,61 @@ body {
   z-index: 5;
 }
 
-/* Page Border: 1.5pt solid black */
+/* Page Border: 1.5pt solid black with zero outer padding so header touches border directly */
 .a4-page-border {
   border: 1.5px solid #000000;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 14px 14px 10px 14px;
+  padding: 0 !important;
   box-sizing: border-box;
   background: #ffffff;
+  overflow: hidden;
 }
 
-.a4-page-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Compact Header Table */
+/* Compact Header Table - TOUCHES the Page Border with ZERO gap */
 .preview-header-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 0.5rem;
+  margin: 0 !important;
   table-layout: fixed;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1.5px solid #000000 !important;
+  background: #ffffff;
 }
 
 .preview-header-table td {
   border: 1px solid #000000;
-  padding: 3px 6px;
+  padding: 4px 8px;
   box-sizing: border-box;
+}
+
+.preview-header-table tr:first-child td {
+  border-top: none !important;
+}
+
+.preview-header-table tr td:first-child {
+  border-left: none !important;
+}
+
+.preview-header-table tr td:last-child {
+  border-right: none !important;
+}
+
+.preview-header-table tr:last-child td {
+  border-bottom: none !important;
 }
 
 .cell-ex-date {
   width: 29.5%;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
   font-family: 'Times New Roman', Times, serif;
-  line-height: 1.15;
+  line-height: 1.2;
+  vertical-align: middle;
 }
 
 .cell-title-merged {
@@ -960,7 +977,16 @@ body {
   font-size: 0.95rem; /* Equivalent to 14pt */
   font-weight: 700;
   font-family: 'Times New Roman', Times, serif;
-  line-height: 1.15;
+  line-height: 1.2;
+}
+
+/* Page Body Content: padded inside the border for AIM, ALGO, CODE, etc. */
+.a4-page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  box-sizing: border-box;
 }
 
 /* Document Typography */
@@ -1068,13 +1094,14 @@ body {
 .doc-footer {
   display: flex;
   justify-content: space-between;
-  border-top: 1px solid #000000;
-  padding-top: 4px;
-  margin-top: 0.4rem;
+  border-top: 1.5px solid #000000;
+  padding: 6px 16px;
   font-family: 'Times New Roman', Times, serif;
   font-size: 0.72rem; /* 11 pt */
   font-weight: 700;
   color: #000000;
+  background: #ffffff;
+  box-sizing: border-box;
 }
 
 /* Result Banner */

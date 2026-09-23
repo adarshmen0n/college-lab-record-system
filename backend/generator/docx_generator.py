@@ -39,11 +39,11 @@ class DocxGenerator:
                 sectPr.remove(existing_borders)
 
             pgBorders_xml = f"""
-            <w:pgBorders {nsdecls('w')} w:offsetFrom="page">
-                <w:top w:val="single" w:sz="12" w:space="24" w:color="000000"/>
-                <w:left w:val="single" w:sz="12" w:space="24" w:color="000000"/>
-                <w:bottom w:val="single" w:sz="12" w:space="24" w:color="000000"/>
-                <w:right w:val="single" w:sz="12" w:space="24" w:color="000000"/>
+            <w:pgBorders {nsdecls('w')} w:offsetFrom="text">
+                <w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+                <w:left w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+                <w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+                <w:right w:val="single" w:sz="12" w:space="0" w:color="000000"/>
             </w:pgBorders>
             """
             sectPr.append(parse_xml(pgBorders_xml))
