@@ -50,7 +50,61 @@ def apply_cell_border(cell, **kwargs):
 class TableManager:
     @staticmethod
     def create_header_table(doc: docx.Document, data: ExperimentData, config: TemplateConfig):
-        """Creates the compact Header Table matching the exact reference template dimensions."""
+        """Clones the Master Header Table directly from the template or constructs using calibrated dimensions."""
+        if config.header_table_xml:
+            try:
+                tbl_elem = parse_xml(config.header_table_xml)
+                doc._body._element.append(tbl_elem)
+                tbl = Table(tbl_elem, doc)
+
+                # Update EX NO in Cell (0, 0)
+                c00 = tbl.cell(0, 0)
+                p00 = c00.paragraphs[0]
+                p00.text = ""
+                p00.paragraph_format.space_before = Pt(3)
+                p00.paragraph_format.space_after = Pt(3)
+                p00.paragraph_format.line_spacing = 1.0
+                r00 = p00.add_run(f"EX NO:{data.experiment_number}")
+                r00.font.name = "Times New Roman"
+                r00.font.size = Pt(11)
+                r00.font.bold = True
+
+                # Update DATE in Cell (1, 0)
+                c10 = tbl.cell(1, 0)
+                p10 = c10.paragraphs[0]
+                p10.text = ""
+                p10.paragraph_format.space_before = Pt(3)
+                p10.paragraph_format.space_after = Pt(3)
+                p10.paragraph_format.line_spacing = 1.0
+                date_str = data.date or ""
+                r10 = p10.add_run(f"DATE:{date_str}")
+                r10.font.name = "Times New Roman"
+                r10.font.size = Pt(11)
+                r10.font.bold = True
+
+                # Update TITLE in Merged Right Cell
+                c01 = tbl.cell(0, 1)
+                c11 = tbl.cell(1, 1)
+                right_cell = c01.merge(c11)
+                p_title = right_cell.paragraphs[0]
+                p_title.text = ""
+                p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p_title.paragraph_format.space_before = Pt(4)
+                p_title.paragraph_format.space_after = Pt(4)
+                p_title.paragraph_format.line_spacing = 1.15
+
+                title_text = data.title.strip()
+                if data.subtitle and data.subtitle.strip() and data.subtitle.strip().upper() != title_text.upper():
+                    title_text = f"{title_text}\n{data.subtitle.strip()}"
+
+                r_title = p_title.add_run(title_text)
+                r_title.font.name = "Times New Roman"
+                r_title.font.size = Pt(14)
+                r_title.font.bold = True
+                return tbl
+            except Exception:
+                pass
+
         tbl = doc.add_table(rows=2, cols=2)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.autofit = False
@@ -131,13 +185,15 @@ class TableManager:
 
     @staticmethod
     def create_evaluation_table(doc: docx.Document, config: TemplateConfig):
-        """
-        Creates or clones the Master Evaluation Marks Table.
-        Features a fixed 2-column layout:
-        - Column 1: Evaluation Criterion (2.5 inches = 3600 dxa)
-        - Column 2: External Marks / Sign (1.5 inches = 2160 dxa)
-        Table layout is strictly fixed so the external marks column never shifts or stretches.
-        """
+        """Creates or clones the Master Evaluation Marks Table."""
+        if config.evaluation_table_xml:
+            try:
+                tbl_elem = parse_xml(config.evaluation_table_xml)
+                doc._body._element.append(tbl_elem)
+                return Table(tbl_elem, doc)
+            except Exception:
+                pass
+
         tbl = doc.add_table(rows=4, cols=2)
         tbl.alignment = WD_TABLE_ALIGNMENT.RIGHT
         tbl.autofit = False

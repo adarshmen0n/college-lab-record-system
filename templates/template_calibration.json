@@ -1,0 +1,89 @@
+{
+  "template_source": "templates/saved_templates/AI_ML_Python_Lab_Record_Reference.docx",
+  "page": {
+    "width_inches": 8.27,
+    "height_inches": 11.69,
+    "width_twips": 11909,
+    "height_twips": 16834,
+    "orientation": "PORTRAIT"
+  },
+  "margins": {
+    "top_inches": 0.75,
+    "bottom_inches": 0.75,
+    "left_inches": 0.75,
+    "right_inches": 0.75,
+    "top_twips": 1080,
+    "bottom_twips": 1080,
+    "left_twips": 1080,
+    "right_twips": 1080,
+    "usable_width_inches": 6.77,
+    "usable_width_twips": 9749
+  },
+  "distances": {
+    "header_distance_inches": 0.5,
+    "footer_distance_inches": 0.5,
+    "header_distance_twips": 720,
+    "footer_distance_twips": 720
+  },
+  "page_borders": {
+    "offset_from": "page",
+    "val": "single",
+    "sz": 12,
+    "space": 24,
+    "color": "000000"
+  },
+  "header_table": {
+    "rows": 2,
+    "cols": 2,
+    "col0_width_dxa": 2880,
+    "col1_width_dxa": 6869,
+    "total_width_dxa": 9749,
+    "col0_width_inches": 2.0,
+    "col1_width_inches": 4.77,
+    "total_width_inches": 6.77
+  },
+  "evaluation_table": {
+    "rows": 4,
+    "cols": 2,
+    "col0_width_dxa": 3600,
+    "col1_width_dxa": 2160,
+    "total_width_dxa": 5760,
+    "labels": [
+      "PROGRAM AND EXECUTION",
+      "CLASS PERFORMANCE",
+      "VIVA",
+      "TOTAL"
+    ]
+  },
+  "typography": {
+    "font_family": "Times New Roman",
+    "heading_font_size_pt": 14,
+    "title_font_size_pt": 14,
+    "body_font_size_pt": 12,
+    "code_font_size_pt": 12,
+    "footer_font_size_pt": 11,
+    "header_meta_font_size_pt": 11
+  },
+  "paragraph_spacing": {
+    "heading": {
+      "before_pt": 8,
+      "after_pt": 3,
+      "line_spacing": 1.15
+    },
+    "body": {
+      "before_pt": 2,
+      "after_pt": 5,
+      "line_spacing": 1.15
+    },
+    "code": {
+      "before_pt": 0,
+      "after_pt": 0,
+      "line_spacing": 1.05
+    },
+    "output": {
+      "before_pt": 0,
+      "after_pt": 1.5,
+      "line_spacing": 1.1
+    }
+  }
+}
