@@ -100,4 +100,6 @@ def test_ai_assist_endpoint():
     data = res.json()
     assert data["success"] is True
     assert len(data["suggestions"]) > 0
-    assert "1. Load the dataset" in data["suggestions"][0]["suggested"]
+    assert "Step 1: Load the dataset." in data["suggestions"][0]["suggested"]
+    assert "Step 2: Split train test." in data["suggestions"][0]["suggested"]
+    assert "Step 3: Fit the model." in data["suggestions"][0]["suggested"]

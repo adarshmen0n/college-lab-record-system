@@ -10,9 +10,9 @@ from ..models.schemas import ExperimentData, TemplateConfig, PagePreviewData
 from .overflow import OverflowHandler
 
 try:
-    from ..sanitizer import sanitize_text
+    from ..sanitizer import sanitize_text, format_algorithm_steps
 except (ImportError, ValueError):
-    from backend.sanitizer import sanitize_text
+    from backend.sanitizer import sanitize_text, format_algorithm_steps
 
 class PagePlan(BaseModel):
     page_index: int
@@ -49,12 +49,8 @@ class PageEngine:
         output_clean = sanitize_text(data.output, "output")
         result_clean = sanitize_text(data.result, "result")
 
-        algo_steps = [s.strip() for s in algo_clean.strip().split("\n") if s.strip()]
-        # Strip numbers if already present (e.g. "1. Step" -> "Step") to avoid double numbering
-        cleaned_steps = []
-        for step in algo_steps:
-            cleaned = step.lstrip("0123456789.-) ").strip()
-            cleaned_steps.append(cleaned if cleaned else step)
+        # Format algorithm steps dynamically into Step 1:, Step 2:, ... format
+        cleaned_steps = format_algorithm_steps(algo_clean)
 
         code_lines = coding_clean.split("\n")
         output_lines = [l for l in output_clean.split("\n")] if output_clean else []

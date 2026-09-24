@@ -7,6 +7,11 @@ import re
 from typing import List, Optional
 from ..models.schemas import AiAssistRequest, AiAssistResponse, AiSuggestionItem
 
+try:
+    from ..sanitizer import format_algorithm_steps
+except (ImportError, ValueError):
+    from backend.sanitizer import format_algorithm_steps
+
 class AiParser:
     @staticmethod
     def assist(request: AiAssistRequest) -> AiAssistResponse:
@@ -20,23 +25,14 @@ class AiParser:
 
         # 1. Algorithm Step Formatting
         if field == "algorithm" or mode == "format":
-            lines = [l.strip() for l in content.split("\n") if l.strip()]
-            numbered_lines = []
-            has_changes = False
-            for idx, line in enumerate(lines, 1):
-                clean_text = line.lstrip("0123456789.-)•* ").strip()
-                new_line = f"{idx}. {clean_text}"
-                if new_line != line:
-                    has_changes = True
-                numbered_lines.append(new_line)
-
-            suggested = "\n".join(numbered_lines)
-            if has_changes and suggested != content:
+            formatted_steps = format_algorithm_steps(content)
+            suggested = "\n\n".join(formatted_steps)
+            if suggested != content:
                 suggestions.append(AiSuggestionItem(
                     field=field,
                     original=content,
                     suggested=suggested,
-                    rationale="Normalized algorithm into sequential numbered steps."
+                    rationale="Normalized algorithm into sequential Step-by-Step format (Step 1:, Step 2:, ...)."
                 ))
 
         # 2. Code Indentation Normalization
@@ -86,9 +82,13 @@ class AiParser:
                     rationale="; ".join(reasons)
                 ))
 
+        suggested_text = suggestions[0].suggested if suggestions else content
+        rationale = suggestions[0].rationale if suggestions else ""
         return AiAssistResponse(
             success=True,
             field=field,
             suggestions=suggestions,
+            suggested_text=suggested_text,
+            rationale=rationale,
             message=f"Found {len(suggestions)} suggestion(s)." if suggestions else "Content looks clean and well-structured!"
         )

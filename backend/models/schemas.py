@@ -5,9 +5,9 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, model_validator
 
 try:
-    from ..sanitizer import sanitize_text
+    from ..sanitizer import sanitize_text, format_algorithm_steps
 except (ImportError, ValueError):
-    from backend.sanitizer import sanitize_text
+    from backend.sanitizer import sanitize_text, format_algorithm_steps
 
 class ExperimentData(BaseModel):
     experiment_number: str = Field(..., description="Explicit user-provided experiment number (e.g. '1.D', '24')")
@@ -33,6 +33,11 @@ class ExperimentData(BaseModel):
             for f in ["title", "subtitle", "aim", "algorithm", "coding", "output", "result"]:
                 if f in data and isinstance(data[f], str):
                     data[f] = sanitize_text(data[f], field_name=f)
+            # Ensure algorithm is normalized into strict Step 1:, Step 2:, ... format
+            if "algorithm" in data and isinstance(data["algorithm"], str) and data["algorithm"].strip():
+                formatted_steps = format_algorithm_steps(data["algorithm"])
+                if formatted_steps:
+                    data["algorithm"] = "\n\n".join(formatted_steps)
         return data
 
 class MarginConfig(BaseModel):
@@ -120,14 +125,31 @@ class AiSuggestionItem(BaseModel):
     rationale: str
 
 class AiAssistRequest(BaseModel):
-    field: str  # "algorithm", "coding", "aim", "result", "all"
-    content: str
-    mode: str = "format"  # "format", "indentation", "spellcheck", "section_detect"
+    field: Optional[str] = "algorithm"
+    field_name: Optional[str] = None
+    content: Optional[str] = ""
+    raw_text: Optional[str] = None
+    mode: Optional[str] = "format"
+    action: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("field") and data.get("field_name"):
+                data["field"] = data["field_name"]
+            if not data.get("content") and data.get("raw_text"):
+                data["content"] = data["raw_text"]
+            if not data.get("mode") and data.get("action"):
+                data["mode"] = data["action"]
+        return data
 
 class AiAssistResponse(BaseModel):
     success: bool
     field: str
     suggestions: List[AiSuggestionItem] = Field(default_factory=list)
+    suggested_text: Optional[str] = None
+    rationale: Optional[str] = None
     message: Optional[str] = None
 
 class WorkspaceExperiment(BaseModel):

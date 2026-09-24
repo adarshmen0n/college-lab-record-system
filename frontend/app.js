@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
     register_number: "714025247005",
     procedure_heading: "ALGORITHM",
     aim: "To create a generator using generator comprehension and iterate over elements using functions.",
-    algorithm: "1. Define a generator function to create squared values.\n2. Use generator comprehension syntax with parentheses.\n3. Iterate over the generator object.\n4. Display the yielded values.",
+    algorithm: "Step 1: Define a generator function to create squared values.\n\nStep 2: Use generator comprehension syntax with parentheses.\n\nStep 3: Iterate over the generator object.\n\nStep 4: Display the yielded values.",
     code_heading: "CODING",
     coding: `def generate_squares(n):
     return (x**2 for x in range(n))
@@ -154,7 +154,7 @@ if __name__ == "__main__":
     register_number: "714025247005",
     procedure_heading: "ALGORITHM",
     aim: "To implement anonymous lambda functions and apply map, filter, and reduce operations in Python.",
-    algorithm: "1. Start the program.\n2. Define a list of integer values.\n3. Apply lambda with map to double the elements.\n4. Use filter to select even numbers.\n5. Compute sum of filtered elements using reduce.\n6. Display transformed results and stop.",
+    algorithm: "Step 1: Start the program.\n\nStep 2: Define a list of integer values.\n\nStep 3: Apply lambda with map to double the elements.\n\nStep 4: Use filter to select even numbers.\n\nStep 5: Compute sum of filtered elements using reduce.\n\nStep 6: Display transformed results and stop.",
     code_heading: "CODING",
     coding: `from functools import reduce
 
@@ -234,14 +234,50 @@ print(f"Sum: {total}")`,
     return filtered.join("\n").trim();
   }
 
+  function normalizeAlgorithmStep(step) {
+    if (!step) return "";
+    let s = step.trim();
+    // Strip leakage if any
+    s = s.replace(/(?:^|\n)\s*(?:#+\s*)?(?:PROJECT UPDATE|IMPORTANT RULE|STOP\s*—|FINAL MASTER|ALGORITHM FORMAT UPDATE)[^\n]*/gi, '').trim();
+    // Repeatedly strip leading Step prefixes and numbered/bullet markers
+    let prev;
+    while (true) {
+      prev = s;
+      s = s.replace(/^(?:step\s*\d+\s*[:.\-]?\s*)/i, '').trim();
+      s = s.replace(/^(?:\(?\d+\s*[\.\):\-]\s*|[-*•]\s*)/, '').trim();
+      if (s === prev) break;
+    }
+    if (s && !['.', '!', '?'].includes(s.slice(-1))) {
+      s += '.';
+    }
+    return s;
+  }
+
+  function formatAlgorithmSteps(algoText) {
+    if (!algoText) return [];
+    const lines = algoText.split('\n').map(l => l.trim()).filter(Boolean);
+    const formatted = [];
+    let stepIdx = 1;
+    for (const line of lines) {
+      const cleaned = normalizeAlgorithmStep(line);
+      if (cleaned) {
+        formatted.push(`Step ${stepIdx}: ${cleaned}`);
+        stepIdx++;
+      }
+    }
+    return formatted;
+  }
+
   function sanitizeExperiment(exp) {
     if (!exp) return exp;
+    const cleanAlgo = sanitizeFieldText(exp.algorithm) || "Step 1: Initialize variables.\n\nStep 2: Execute logic.\n\nStep 3: Display results.";
+    const formattedSteps = formatAlgorithmSteps(cleanAlgo);
     return {
       ...exp,
       title: sanitizeFieldText(exp.title) || "LAB EXPERIMENT",
       subtitle: sanitizeFieldText(exp.subtitle),
       aim: sanitizeFieldText(exp.aim) || "To execute and verify the laboratory experiment.",
-      algorithm: sanitizeFieldText(exp.algorithm) || "1. Initialize variables.\n2. Execute logic.\n3. Display results.",
+      algorithm: formattedSteps.length > 0 ? formattedSteps.join("\n\n") : cleanAlgo,
       coding: sanitizeFieldText(exp.coding) || "def main():\n    print(\"Executed successfully\")",
       output: sanitizeFieldText(exp.output),
       result: sanitizeFieldText(exp.result) || "The experiment was successfully executed."
@@ -289,7 +325,7 @@ print(f"Sum: {total}")`,
       register_number: (registerNumberInput.value.trim()) || "714025247005",
       aim: (expAimInput.value.trim()) || "To execute and verify the laboratory experiment.",
       procedure_heading: "ALGORITHM",
-      algorithm: (expAlgoInput.value.trim()) || "1. Start\n2. Execute program\n3. Stop",
+      algorithm: (expAlgoInput.value.trim()) || "Step 1: Start.\n\nStep 2: Execute program.\n\nStep 3: Stop.",
       code_heading: "CODING",
       coding: expCodeInput.value || "def main():\n    pass",
       output: expOutputInput.value || "Program execution output...",
@@ -604,7 +640,7 @@ print(f"Sum: {total}")`,
     experiments.forEach(exp => {
       const sName = exp.student_name || "ADARSH MENON";
       const rNum = exp.register_number || "714025247005";
-      const algoSteps = (exp.algorithm || "").split("\n").map(s => s.replace(/^[0-9]+[.)-]\s*/, "").trim()).filter(Boolean);
+      const algoSteps = formatAlgorithmSteps(exp.algorithm || "");
       const codeLines = (exp.coding || "").split("\n");
       const outLines = (exp.output || "").split("\n").filter(Boolean);
 
@@ -775,14 +811,18 @@ print(f"Sum: {total}")`,
         hAlgo.textContent = p.procedure_heading;
         content.appendChild(hAlgo);
 
-        const olAlgo = document.createElement("ol");
-        olAlgo.className = "doc-steps";
-        p.algorithm_steps.forEach(st => {
-          const li = document.createElement("li");
-          li.textContent = st;
-          olAlgo.appendChild(li);
+        const stepsContainer = document.createElement("div");
+        stepsContainer.className = "doc-steps-container";
+        const formattedSteps = p.algorithm_steps.some(s => s.startsWith("Step "))
+          ? p.algorithm_steps
+          : formatAlgorithmSteps(p.algorithm_steps.join("\n"));
+        formattedSteps.forEach(st => {
+          const pStep = document.createElement("div");
+          pStep.className = "doc-step-item";
+          pStep.textContent = st;
+          stepsContainer.appendChild(pStep);
         });
-        content.appendChild(olAlgo);
+        content.appendChild(stepsContainer);
       }
 
       // 4. CODING
@@ -1385,24 +1425,31 @@ print(f"Sum: {total}")`,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          field: fieldName,
           field_name: fieldName,
+          content: rawText,
           raw_text: rawText,
+          mode: action === "format_steps" ? "format" : action,
           action: action
         })
       });
 
       const data = await res.json();
-      if (data.success) {
-        activeAiTargetField = fieldName;
-        activeAiSuggestion = data.suggested_text;
+      const firstSug = data.suggestions && data.suggestions.length > 0 ? data.suggestions[0] : null;
+      const suggestedText = data.suggested_text || (firstSug ? firstSug.suggested : null);
+      const rationale = data.rationale || (firstSug ? firstSug.rationale : "AI optimization suggestions.");
 
-        modalRationale.textContent = data.rationale || "AI optimization suggestions.";
+      if (data.success && suggestedText) {
+        activeAiTargetField = fieldName;
+        activeAiSuggestion = suggestedText;
+
+        modalRationale.textContent = rationale;
         diffOriginal.textContent = rawText;
-        diffSuggested.textContent = data.suggested_text;
+        diffSuggested.textContent = suggestedText;
         aiModal.classList.remove("hidden");
         if (inlineStatusBanner) inlineStatusBanner.classList.add("hidden");
       } else {
-        showStatus("error", "AI formatting could not be completed.");
+        showStatus("error", data.message || "AI formatting could not be completed.");
       }
     } catch (e) {
       showStatus("error", "AI service connection error: " + e.message);

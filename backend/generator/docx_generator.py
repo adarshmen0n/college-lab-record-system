@@ -21,9 +21,9 @@ from ..layout.page_engine import PageEngine, ExperimentLayoutPlan
 from .tables import TableManager
 
 try:
-    from ..sanitizer import sanitize_text
+    from ..sanitizer import sanitize_text, format_algorithm_steps
 except (ImportError, ValueError):
-    from backend.sanitizer import sanitize_text
+    from backend.sanitizer import sanitize_text, format_algorithm_steps
 
 class DocxGenerator:
     @staticmethod
@@ -107,15 +107,16 @@ class DocxGenerator:
 
     @staticmethod
     def _add_algorithm_steps(doc, steps: List[str], font_family: str = "Times New Roman"):
-        for idx, step in enumerate(steps, 1):
+        formatted_steps = format_algorithm_steps("\n".join(steps))
+        for step_text in formatted_steps:
             p = doc.add_paragraph()
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             p.paragraph_format.left_indent = Inches(0.4)
-            p.paragraph_format.space_before = Pt(1.5)
-            p.paragraph_format.space_after = Pt(2.5)
+            p.paragraph_format.space_before = Pt(2)
+            p.paragraph_format.space_after = Pt(3)
             p.paragraph_format.line_spacing = 1.15
-            run = p.add_run(f"{idx}. {step}")
-            run.font.name = "Times New Roman"
+            run = p.add_run(step_text)
+            run.font.name = font_family
             run.font.size = Pt(12)
 
     @staticmethod

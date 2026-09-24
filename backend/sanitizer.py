@@ -49,7 +49,7 @@ COMBINED_LEAKAGE_REGEX = re.compile('|'.join(f'({sig})' for sig in LEAKAGE_SIGNA
 # Field fallbacks if text consists entirely of instructions
 FIELD_FALLBACKS = {
     "aim": "To implement and verify the laboratory experiment.",
-    "algorithm": "1. Initialize the required variables.\n2. Execute core operations.\n3. Display the computed results.",
+    "algorithm": "Step 1: Initialize the required variables.\nStep 2: Execute core operations.\nStep 3: Display the computed results.",
     "coding": "def execute_experiment():\n    print(\"Experiment executed successfully.\")\n\nif __name__ == \"__main__\":\n    execute_experiment()",
     "output": "Experiment executed successfully.",
     "result": "The experiment was successfully executed and verified.",
@@ -62,6 +62,52 @@ def contains_leakage(text: Optional[str]) -> bool:
     if not text:
         return False
     return bool(COMBINED_LEAKAGE_REGEX.search(text))
+
+def normalize_algorithm_step(step: str) -> str:
+    """
+    Cleans a single algorithm step string by stripping any existing prefix:
+    - 'Step 1:', 'Step 1.', 'Step 1 -', 'Step 1', 'STEP 1:'
+    - '1.', '1)', '(1)', '1 -', '1:'
+    - '*', '-', '•'
+    Also ensures proper terminal punctuation (if not present, adds period).
+    """
+    s = step.strip()
+    if not s:
+        return ""
+
+    # Repeatedly strip Step X:, numbers, bullets until clean of any prefix
+    while True:
+        prev = s
+        s = re.sub(r'^(?:step\s*\d+\s*[:.\-]?\s*)', '', s, flags=re.IGNORECASE).strip()
+        s = re.sub(r'^(?:\(?\d+\s*[\.\):\-]\s*|[-*•]\s*)', '', s).strip()
+        if s == prev:
+            break
+
+    # Ensure ending punctuation (period) if it doesn't end with ., !, or ?
+    if s and s[-1] not in ('.', '!', '?'):
+        s += '.'
+
+    return s
+
+def format_algorithm_steps(algo_text: str) -> List[str]:
+    """
+    Parses algorithm text and formats each instruction into strict Step-by-Step format:
+    'Step 1: ...', 'Step 2: ...', up to 'Step N: ...'
+    Supports arbitrary step count, strips duplicate numbering, and preserves meaning.
+    """
+    if not algo_text:
+        return []
+
+    lines = [l.strip() for l in algo_text.split("\n") if l.strip()]
+    formatted = []
+    step_idx = 1
+    for line in lines:
+        cleaned = normalize_algorithm_step(line)
+        if cleaned:
+            formatted.append(f"Step {step_idx}: {cleaned}")
+            step_idx += 1
+
+    return formatted
 
 def sanitize_text(text: Optional[str], field_name: Optional[str] = None) -> str:
     """

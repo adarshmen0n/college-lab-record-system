@@ -1003,12 +1003,24 @@ body {
   color: #000000;
 }
 
-.doc-steps {
+.doc-steps,
+.doc-steps-container {
   font-family: 'Times New Roman', Times, serif;
   font-size: 0.78rem; /* 12 pt */
   line-height: 1.25;
-  padding-left: 1.4rem;
+  padding-left: 0;
   margin-bottom: 0.45rem;
+  color: #000000;
+}
+
+.doc-step-item {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 0.78rem; /* 12 pt */
+  line-height: 1.25;
+  text-align: justify;
+  margin-top: 0.12rem;
+  margin-bottom: 0.22rem;
+  padding-left: 1.4rem;
   color: #000000;
 }
 
