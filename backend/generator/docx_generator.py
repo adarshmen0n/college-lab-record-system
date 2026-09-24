@@ -35,8 +35,10 @@ class DocxGenerator:
         section.bottom_margin = Inches(config.margins.bottom)
         section.left_margin = Inches(config.margins.left)
         section.right_margin = Inches(config.margins.right)
+        section.header_distance = Inches(0.5)
+        section.footer_distance = Inches(0.5)
 
-        # Page Borders
+        # Page Borders (Calibrated to Master Reference Template: 24pt from page edge, framing body & footer)
         if config.has_page_border:
             sectPr = section._sectPr
             # Remove any existing borders
@@ -45,11 +47,11 @@ class DocxGenerator:
                 sectPr.remove(existing_borders)
 
             pgBorders_xml = f"""
-            <w:pgBorders {nsdecls('w')} w:offsetFrom="text">
-                <w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-                <w:left w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-                <w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-                <w:right w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+            <w:pgBorders {nsdecls('w')} w:offsetFrom="page">
+                <w:top w:val="single" w:sz="12" w:space="24" w:color="000000"/>
+                <w:left w:val="single" w:sz="12" w:space="24" w:color="000000"/>
+                <w:bottom w:val="single" w:sz="12" w:space="24" w:color="000000"/>
+                <w:right w:val="single" w:sz="12" w:space="24" w:color="000000"/>
             </w:pgBorders>
             """
             sectPr.append(parse_xml(pgBorders_xml))

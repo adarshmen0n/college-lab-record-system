@@ -48,226 +48,365 @@ def apply_cell_border(cell, **kwargs):
     """)
     tcPr.append(tcBorders)
 
+from xml.sax.saxutils import escape as escape_xml
+
+def insert_table_in_doc(doc: docx.Document, tbl_elem) -> Table:
+    """Inserts a table element at the current document position (before sectPr)."""
+    if len(doc.paragraphs) == 1 and not doc.paragraphs[0].text:
+        p0 = doc.paragraphs[0]._p
+        p0.addprevious(tbl_elem)
+        p0.getparent().remove(p0)
+    else:
+        p_ph = doc.add_paragraph()
+        p_ph._p.addprevious(tbl_elem)
+        p_ph._p.getparent().remove(p_ph._p)
+    return Table(tbl_elem, doc)
+
 class TableManager:
     @staticmethod
     def create_header_table(doc: docx.Document, data: ExperimentData, config: TemplateConfig):
-        """Clones the Master Header Table directly from the template or constructs using calibrated dimensions."""
-        if config.header_table_xml:
-            try:
-                tbl_elem = parse_xml(config.header_table_xml)
-                doc._body._element.append(tbl_elem)
-                tbl = Table(tbl_elem, doc)
+        """Creates the Master Header Table matching the reference template geometry exactly."""
+        title_text = data.title.strip() if data.title else ""
+        subtitle_text = data.subtitle.strip() if data.subtitle else ""
+        has_subtitle = bool(subtitle_text and subtitle_text.upper() != title_text.upper())
 
-                # Update EX NO in Cell (0, 0)
-                c00 = tbl.cell(0, 0)
-                p00 = c00.paragraphs[0]
-                p00.text = ""
-                p00.paragraph_format.space_before = Pt(3)
-                p00.paragraph_format.space_after = Pt(3)
-                p00.paragraph_format.line_spacing = 1.0
-                r00 = p00.add_run(f"EX NO:{data.experiment_number}")
-                r00.font.name = "Times New Roman"
-                r00.font.size = Pt(11)
-                r00.font.bold = True
+        exp_no = data.experiment_number.strip() if data.experiment_number else ""
+        date_str = data.date.strip() if data.date else ""
 
-                # Update DATE in Cell (1, 0)
-                c10 = tbl.cell(1, 0)
-                p10 = c10.paragraphs[0]
-                p10.text = ""
-                p10.paragraph_format.space_before = Pt(3)
-                p10.paragraph_format.space_after = Pt(3)
-                p10.paragraph_format.line_spacing = 1.0
-                date_str = data.date or ""
-                r10 = p10.add_run(f"DATE:{date_str}")
-                r10.font.name = "Times New Roman"
-                r10.font.size = Pt(11)
-                r10.font.bold = True
+        if has_subtitle:
+            title_xml = f"""
+            <w:r>
+              <w:rPr>
+                <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+                <w:b/>
+                <w:sz w:val="28"/>
+              </w:rPr>
+              <w:t>{escape_xml(title_text)}</w:t>
+              <w:br/>
+              <w:t>{escape_xml(subtitle_text)}</w:t>
+            </w:r>
+            """
+        else:
+            title_xml = f"""
+            <w:r>
+              <w:rPr>
+                <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+                <w:b/>
+                <w:sz w:val="28"/>
+              </w:rPr>
+              <w:t>{escape_xml(title_text)}</w:t>
+            </w:r>
+            """
 
-                has_subtitle = bool(data.subtitle and data.subtitle.strip() and data.subtitle.strip().upper() != data.title.strip().upper())
-                c01 = tbl.cell(0, 1)
-                c11 = tbl.cell(1, 1)
-
-                if has_subtitle:
-                    p01 = c01.paragraphs[0]
-                    p01.text = ""
-                    p01.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    r01 = p01.add_run(data.title.strip())
-                    r01.font.name = "Times New Roman"
-                    r01.font.size = Pt(14)
-                    r01.font.bold = True
-
-                    p11 = c11.paragraphs[0]
-                    p11.text = ""
-                    p11.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    r11 = p11.add_run(data.subtitle.strip())
-                    r11.font.name = "Times New Roman"
-                    r11.font.size = Pt(14)
-                    r11.font.bold = True
-                else:
-                    right_cell = c01.merge(c11)
-                    for p in right_cell.paragraphs[1:]:
-                        p._p.getparent().remove(p._p)
-                    p_title = right_cell.paragraphs[0]
-                    p_title.text = ""
-                    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    p_title.paragraph_format.space_before = Pt(4)
-                    p_title.paragraph_format.space_after = Pt(4)
-                    p_title.paragraph_format.line_spacing = 1.15
-                    r_title = p_title.add_run(data.title.strip())
-                    r_title.font.name = "Times New Roman"
-                    r_title.font.size = Pt(14)
-                    r_title.font.bold = True
-
-                return tbl
-            except Exception:
-                pass
-
-        tbl = doc.add_table(rows=2, cols=2)
-        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-        tbl.autofit = False
-
-        # Set fixed table layout in tblPr
-        tblPr = tbl._tbl.tblPr
-        tblLayout = tblPr.find(qn('w:tblLayout'))
-        if tblLayout is not None:
-            tblPr.remove(tblLayout)
-        tblPr.append(parse_xml(f'<w:tblLayout {nsdecls("w")} w:type="fixed"/>'))
-
-        # Set table grid: Col 0 = 2.0" (2880 dxa), Col 1 = 4.77" (6869 dxa) -> Total 9749 dxa
-        col0_dxa = 2880
-        col1_dxa = 6869
-        tblGrid = parse_xml(f"""
-            <w:tblGrid {nsdecls('w')}>
-                <w:gridCol w:w="{col0_dxa}"/>
-                <w:gridCol w:w="{col1_dxa}"/>
-            </w:tblGrid>
-        """)
-        tbl._tbl.append(tblGrid)
-
-        c00 = tbl.cell(0, 0)
-        c01 = tbl.cell(0, 1)
-        c10 = tbl.cell(1, 0)
-        c11 = tbl.cell(1, 1)
-
-        # Merge right column cells so the title spans both rows vertically
-        right_cell = c01.merge(c11)
-
-        # Cell (0, 0): EX NO
-        set_cell_width(c00, col0_dxa)
-        set_cell_v_align(c00, "center")
-        apply_cell_border(c00)
-        p00 = c00.paragraphs[0]
-        p00.paragraph_format.space_before = Pt(3)
-        p00.paragraph_format.space_after = Pt(3)
-        p00.paragraph_format.line_spacing = 1.0
-        r00 = p00.add_run(f"EX NO:{data.experiment_number}")
-        r00.font.name = "Times New Roman"
-        r00.font.size = Pt(11)
-        r00.font.bold = True
-
-        # Cell (1, 0): DATE
-        set_cell_width(c10, col0_dxa)
-        set_cell_v_align(c10, "center")
-        apply_cell_border(c10)
-        p10 = c10.paragraphs[0]
-        p10.paragraph_format.space_before = Pt(3)
-        p10.paragraph_format.space_after = Pt(3)
-        p10.paragraph_format.line_spacing = 1.0
-        date_str = data.date or ""
-        r10 = p10.add_run(f"DATE:{date_str}")
-        r10.font.name = "Times New Roman"
-        r10.font.size = Pt(11)
-        r10.font.bold = True
-
-        # Merged Right Cell: TITLE
-        set_cell_width(right_cell, col1_dxa)
-        set_cell_v_align(right_cell, "center")
-        apply_cell_border(right_cell)
-        p_title = right_cell.paragraphs[0]
-        p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_title.paragraph_format.space_before = Pt(4)
-        p_title.paragraph_format.space_after = Pt(4)
-        p_title.paragraph_format.line_spacing = 1.15
-
-        title_text = data.title.strip()
-        if data.subtitle and data.subtitle.strip() and data.subtitle.strip().upper() != title_text.upper():
-            title_text = f"{title_text}\n{data.subtitle.strip()}"
-
-        r_title = p_title.add_run(title_text)
-        r_title.font.name = "Times New Roman"
-        r_title.font.size = Pt(14)
-        r_title.font.bold = True
-
-        return tbl
+        header_tbl_xml = f"""
+        <w:tbl {nsdecls('w')}>
+          <w:tblPr>
+            <w:tblW w:type="auto" w:w="0"/>
+            <w:jc w:val="center"/>
+            <w:tblLayout w:type="fixed"/>
+            <w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/>
+          </w:tblPr>
+          <w:tblGrid>
+            <w:gridCol w:w="2880"/>
+            <w:gridCol w:w="6869"/>
+          </w:tblGrid>
+          <w:tr>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="2880" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60" w:line="240" w:lineRule="auto"/>
+                </w:pPr>
+                <w:r>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+                    <w:b/>
+                    <w:sz w:val="22"/>
+                  </w:rPr>
+                  <w:t>EX NO:{escape_xml(exp_no)}</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+            <w:tc>
+              <w:tcPr>
+                <w:vMerge w:val="restart"/>
+                <w:tcW w:w="6869" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="80" w:after="80" w:line="276" w:lineRule="auto"/>
+                  <w:jc w:val="center"/>
+                </w:pPr>
+                {title_xml}
+              </w:p>
+            </w:tc>
+          </w:tr>
+          <w:tr>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="2880" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60" w:line="240" w:lineRule="auto"/>
+                </w:pPr>
+                <w:r>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+                    <w:b/>
+                    <w:sz w:val="22"/>
+                  </w:rPr>
+                  <w:t>DATE:{escape_xml(date_str)}</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+            <w:tc>
+              <w:tcPr>
+                <w:vMerge/>
+                <w:tcW w:w="6869" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p/>
+            </w:tc>
+          </w:tr>
+        </w:tbl>
+        """
+        tbl_elem = parse_xml(header_tbl_xml)
+        return insert_table_in_doc(doc, tbl_elem)
 
     @staticmethod
     def create_evaluation_table(doc: docx.Document, config: TemplateConfig):
-        """Creates or clones the Master Evaluation Marks Table."""
-        if config.evaluation_table_xml:
-            try:
-                tbl_elem = parse_xml(config.evaluation_table_xml)
-                doc._body._element.append(tbl_elem)
-                return Table(tbl_elem, doc)
-            except Exception:
-                pass
-
-        tbl = doc.add_table(rows=4, cols=2)
-        tbl.alignment = WD_TABLE_ALIGNMENT.RIGHT
-        tbl.autofit = False
-
-        # Enforce fixed table layout in tblPr
-        tblPr = tbl._tbl.tblPr
-        tblLayout = tblPr.find(qn('w:tblLayout'))
-        if tblLayout is not None:
-            tblPr.remove(tblLayout)
-        tblPr.append(parse_xml(f'<w:tblLayout {nsdecls("w")} w:type="fixed"/>'))
-
-        # Explicit table grid
-        col0_dxa = 3600  # 2.5 inches
-        col1_dxa = 2160  # 1.5 inches (External marks column)
-        tblGrid = parse_xml(f"""
-            <w:tblGrid {nsdecls('w')}>
-                <w:gridCol w:w="{col0_dxa}"/>
-                <w:gridCol w:w="{col1_dxa}"/>
-            </w:tblGrid>
-        """)
-        existing_grid = tbl._tbl.find(qn('w:tblGrid'))
-        if existing_grid is not None:
-            tbl._tbl.remove(existing_grid)
-        tblPr.addnext(tblGrid)
-
-        labels = ["PROGRAM AND EXECUTION", "CLASS PERFORMANCE", "VIVA", "TOTAL"]
-
-        for r_idx, label in enumerate(labels):
-            row = tbl.rows[r_idx]
-            
-            # Row height at least 20pt (400 dxa)
-            trPr = row._tr.get_or_add_trPr()
-            trPr.append(parse_xml(f'<w:trHeight {nsdecls("w")} w:val="400" w:hRule="atLeast"/>'))
-
-            # Cell 0: Criterion
-            c0 = row.cells[0]
-            set_cell_width(c0, col0_dxa)
-            set_cell_v_align(c0, "center")
-            apply_cell_border(c0)
-            p0 = c0.paragraphs[0]
-            p0.paragraph_format.space_before = Pt(3)
-            p0.paragraph_format.space_after = Pt(3)
-            r0 = p0.add_run(label)
-            r0.font.name = config.font_family
-            r0.font.size = Pt(10)
-            r0.font.bold = True
-
-            # Cell 1: External Marks / Signature space
-            c1 = row.cells[1]
-            set_cell_width(c1, col1_dxa)
-            set_cell_v_align(c1, "center")
-            apply_cell_border(c1)
-            p1 = c1.paragraphs[0]
-            p1.paragraph_format.space_before = Pt(3)
-            p1.paragraph_format.space_after = Pt(3)
-
-        p_spacer = doc.add_paragraph()
-        p_spacer.paragraph_format.space_before = Pt(6)
-        p_spacer.paragraph_format.space_after = Pt(4)
-        return tbl
+        """Creates the Master Evaluation Marks Table matching Table 1/Table 5 of the reference template."""
+        eval_tbl_xml = f"""
+        <w:tbl {nsdecls('w')}>
+          <w:tblPr>
+            <w:tblW w:type="auto" w:w="0"/>
+            <w:jc w:val="right"/>
+            <w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/>
+            <w:tblLayout w:type="fixed"/>
+          </w:tblPr>
+          <w:tblGrid>
+            <w:gridCol w:w="3600"/>
+            <w:gridCol w:w="2160"/>
+          </w:tblGrid>
+          <w:tr>
+            <w:trPr>
+              <w:trHeight w:val="400" w:hRule="atLeast"/>
+            </w:trPr>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="3600" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60"/>
+                </w:pPr>
+                <w:r>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+                    <w:b/>
+                    <w:sz w:val="20"/>
+                  </w:rPr>
+                  <w:t>PROGRAM AND EXECUTION</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="2160" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60"/>
+                </w:pPr>
+              </w:p>
+            </w:tc>
+          </w:tr>
+          <w:tr>
+            <w:trPr>
+              <w:trHeight w:val="400" w:hRule="atLeast"/>
+            </w:trPr>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="3600" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60"/>
+                </w:pPr>
+                <w:r>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+                    <w:b/>
+                    <w:sz w:val="20"/>
+                  </w:rPr>
+                  <w:t>CLASS PERFORMANCE</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="2160" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60"/>
+                </w:pPr>
+              </w:p>
+            </w:tc>
+          </w:tr>
+          <w:tr>
+            <w:trPr>
+              <w:trHeight w:val="400" w:hRule="atLeast"/>
+            </w:trPr>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="3600" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60"/>
+                </w:pPr>
+                <w:r>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+                    <w:b/>
+                    <w:sz w:val="20"/>
+                  </w:rPr>
+                  <w:t>VIVA</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="2160" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60"/>
+                </w:pPr>
+              </w:p>
+            </w:tc>
+          </w:tr>
+          <w:tr>
+            <w:trPr>
+              <w:trHeight w:val="400" w:hRule="atLeast"/>
+            </w:trPr>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="3600" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60"/>
+                </w:pPr>
+                <w:r>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+                    <w:b/>
+                    <w:sz w:val="20"/>
+                  </w:rPr>
+                  <w:t>TOTAL</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+            <w:tc>
+              <w:tcPr>
+                <w:tcW w:w="2160" w:type="dxa"/>
+                <w:vAlign w:val="center"/>
+                <w:tcBorders>
+                  <w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:left w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                  <w:right w:val="single" w:sz="6" w:space="0" w:color="000000"/>
+                </w:tcBorders>
+              </w:tcPr>
+              <w:p>
+                <w:pPr>
+                  <w:spacing w:before="60" w:after="60"/>
+                </w:pPr>
+              </w:p>
+            </w:tc>
+          </w:tr>
+        </w:tbl>
+        """
+        tbl_elem = parse_xml(eval_tbl_xml)
+        return insert_table_in_doc(doc, tbl_elem)

@@ -886,7 +886,7 @@ body {
   flex-direction: column;
   position: relative;
   box-sizing: border-box;
-  padding: 0 !important;
+  padding: 16px !important;
   font-family: 'Times New Roman', Times, serif;
   transition: transform 0.15s ease;
 }
@@ -913,48 +913,33 @@ body {
   z-index: 5;
 }
 
-/* Page Border: 1.5pt solid black with zero outer padding so header touches border directly */
+/* Page Border: 1.5pt solid black framing the page 24pt from the edge */
 .a4-page-border {
   border: 1.5px solid #000000;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 0 !important;
+  padding: 18px 20px 14px 20px !important;
   box-sizing: border-box;
   background: #ffffff;
   overflow: hidden;
 }
 
-/* Compact Header Table - TOUCHES the Page Border with ZERO gap */
+/* Master Header Table: closed 4-sided table with exact internal dividers */
 .preview-header-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 0 !important;
+  margin: 0 0 10px 0 !important;
   table-layout: fixed;
-  border-top: none !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-bottom: 1.5px solid #000000 !important;
+  border: 1px solid #000000 !important;
   background: #ffffff;
 }
 
 .preview-header-table td {
-  border: 1px solid #000000;
+  border: 1px solid #000000 !important;
   padding: 4px 8px;
   box-sizing: border-box;
-}
-
-.preview-header-table tr:first-child td {
-  border-top: none !important;
-}
-
-.preview-header-table tr td:first-child {
-  border-left: none !important;
-}
-
-.preview-header-table tr td:last-child {
-  border-right: none !important;
 }
 
 .cell-ex-date {
@@ -976,12 +961,12 @@ body {
   line-height: 1.2;
 }
 
-/* Page Body Content: padded inside the border for AIM, ALGO, CODE, etc. */
+/* Page Body Content: shares exact same left & right margin as header table */
 .a4-page-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 12px 16px;
+  padding: 0 !important;
   box-sizing: border-box;
 }
 
@@ -1097,7 +1082,7 @@ body {
 .doc-footer {
   display: flex;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 8px 0 0 0;
   font-family: 'Times New Roman', Times, serif;
   font-size: 0.72rem; /* 11 pt */
   font-weight: 700;
