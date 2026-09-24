@@ -8,6 +8,11 @@ import docx
 from typing import Dict, Any, List, Optional
 from ..models.schemas import ValidationReport, ExperimentData
 
+try:
+    from ..sanitizer import contains_leakage
+except (ImportError, ValueError):
+    from backend.sanitizer import contains_leakage
+
 class PageChecker:
     @staticmethod
     def validate_document(docx_path: str, expected_exp: Optional[ExperimentData] = None) -> ValidationReport:
@@ -125,23 +130,10 @@ class PageChecker:
                 errors.append(f"Experiment number '{expected_exp.experiment_number}' not found in generated document.")
 
         # 6. Check for Prompt & System Instruction Leakage
-        forbidden_phrases = [
-            "MASTER UPDATE PROMPT",
-            "FINAL MASTER EXECUTION PROMPT",
-            "PROJECT UPDATE — EXPERIMENT HEADER",
-            "YOU ARE MODIFYING THE EXISTING",
-            "YOU ARE WORKING ON THE EXISTING",
-            "DO NOT REBUILD THE PROJECT",
-            "ANTIGRAVITY INSTRUCTIONS",
-            "DEVELOPER INSTRUCTIONS",
-            "IMPLEMENTATION INSTRUCTIONS",
-            "SYSTEM PROMPT"
-        ]
-        full_doc_text = (all_tables_text + " " + all_p_text).upper()
-        found_leaks = [phrase for phrase in forbidden_phrases if phrase in full_doc_text]
-        if found_leaks:
+        full_doc_text = all_tables_text + "\n" + all_p_text
+        if contains_leakage(full_doc_text):
             checks["no_instruction_leakage"] = False
-            errors.append(f"Prompt/instruction leakage detected in document: found '{found_leaks[0]}'")
+            errors.append("Prompt/instruction leakage detected in document.")
 
         # Determine overall validity
         if not checks["can_open_docx"]:

@@ -4,13 +4,18 @@ from unstructured text or imported documents, preserving indentation and line st
 """
 import re
 from typing import Dict, Any, Optional
-from ..models.schemas import ExperimentData
+
+try:
+    from ..sanitizer import sanitize_text
+except (ImportError, ValueError):
+    from backend.sanitizer import sanitize_text
 
 class SectionParser:
     @staticmethod
     def parse_raw_text(text: str) -> Dict[str, Any]:
         """
-        Parses raw text containing experiment notes into structured dictionary fields.
+        Parses raw text containing experiment notes into structured dictionary fields,
+        strictly sanitizing any prompt leakage or developer instructions.
         """
         result = {
             "experiment_number": "",
@@ -24,8 +29,8 @@ class SectionParser:
             "result": ""
         }
 
-        # Normalize carriage returns
-        cleaned = text.replace("\r\n", "\n").replace("\r", "\n")
+        # Normalize carriage returns and sanitize prompt instructions upfront
+        cleaned = sanitize_text(text.replace("\r\n", "\n").replace("\r", "\n"))
 
         # 1. Look for Header fields
         exp_match = re.search(r'(?:EX\s*NO|EXPERIMENT\s*(?:NO)?|EXPT\s*NO)\s*[:.\-]?\s*([^\n]+)', cleaned, re.IGNORECASE)
@@ -56,14 +61,14 @@ class SectionParser:
                 section_content = cleaned[start_pos:end_pos].strip()
 
                 if "AIM" in tag:
-                    result["aim"] = section_content
+                    result["aim"] = sanitize_text(section_content, "aim")
                 elif "ALGO" in tag:
-                    result["algorithm"] = section_content
+                    result["algorithm"] = sanitize_text(section_content, "algorithm")
                 elif "COD" in tag or "PROG" in tag:
-                    result["coding"] = section_content
+                    result["coding"] = sanitize_text(section_content, "coding")
                 elif "OUT" in tag:
-                    result["output"] = section_content
+                    result["output"] = sanitize_text(section_content, "output")
                 elif "RES" in tag:
-                    result["result"] = section_content
+                    result["result"] = sanitize_text(section_content, "result")
 
         return result

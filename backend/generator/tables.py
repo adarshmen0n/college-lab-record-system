@@ -5,6 +5,7 @@ Enforces fixed table layouts so external marks columns never shift or distort.
 """
 import copy
 import docx
+from docx.table import Table
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -82,25 +83,41 @@ class TableManager:
                 r10.font.size = Pt(11)
                 r10.font.bold = True
 
-                # Update TITLE in Merged Right Cell
+                has_subtitle = bool(data.subtitle and data.subtitle.strip() and data.subtitle.strip().upper() != data.title.strip().upper())
                 c01 = tbl.cell(0, 1)
                 c11 = tbl.cell(1, 1)
-                right_cell = c01.merge(c11)
-                p_title = right_cell.paragraphs[0]
-                p_title.text = ""
-                p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                p_title.paragraph_format.space_before = Pt(4)
-                p_title.paragraph_format.space_after = Pt(4)
-                p_title.paragraph_format.line_spacing = 1.15
 
-                title_text = data.title.strip()
-                if data.subtitle and data.subtitle.strip() and data.subtitle.strip().upper() != title_text.upper():
-                    title_text = f"{title_text}\n{data.subtitle.strip()}"
+                if has_subtitle:
+                    p01 = c01.paragraphs[0]
+                    p01.text = ""
+                    p01.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    r01 = p01.add_run(data.title.strip())
+                    r01.font.name = "Times New Roman"
+                    r01.font.size = Pt(14)
+                    r01.font.bold = True
 
-                r_title = p_title.add_run(title_text)
-                r_title.font.name = "Times New Roman"
-                r_title.font.size = Pt(14)
-                r_title.font.bold = True
+                    p11 = c11.paragraphs[0]
+                    p11.text = ""
+                    p11.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    r11 = p11.add_run(data.subtitle.strip())
+                    r11.font.name = "Times New Roman"
+                    r11.font.size = Pt(14)
+                    r11.font.bold = True
+                else:
+                    right_cell = c01.merge(c11)
+                    for p in right_cell.paragraphs[1:]:
+                        p._p.getparent().remove(p._p)
+                    p_title = right_cell.paragraphs[0]
+                    p_title.text = ""
+                    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p_title.paragraph_format.space_before = Pt(4)
+                    p_title.paragraph_format.space_after = Pt(4)
+                    p_title.paragraph_format.line_spacing = 1.15
+                    r_title = p_title.add_run(data.title.strip())
+                    r_title.font.name = "Times New Roman"
+                    r_title.font.size = Pt(14)
+                    r_title.font.bold = True
+
                 return tbl
             except Exception:
                 pass

@@ -126,3 +126,101 @@ def test_page_checker_detects_and_fails_on_leakage(tmp_path):
     assert report.is_valid is False
     assert report.checks.get("no_instruction_leakage") is False
     assert any("leakage detected" in err.lower() for err in report.errors)
+
+def test_user_reported_prompt_leakage_fully_stripped(tmp_path):
+    """
+    Specifically tests the exact user-reported prompt text from prompt #10:
+    '# PROJECT UPDATE — EXPERIMENT HEADER + TYPOGRAPHY CORRECTION
+    You are modifying the existing General College Laboratory Record Automation System.
+    Do NOT rebuild the project from scratch.
+    Inspect the current implementation...'
+    Guarantees it is completely eliminated from the generated docx.
+    """
+    out_file = str(tmp_path / "user_leakage_test.docx")
+    cfg = TemplateConfig()
+    
+    leaked_input = (
+        "# PROJECT UPDATE — EXPERIMENT HEADER + TYPOGRAPHY CORRECTION\n\n"
+        "You are modifying the existing General College Laboratory Record Automation System.\n\n"
+        "Do NOT rebuild the project from scratch.\n\n"
+        "Inspect the current implementation and fix the document-generation/layout engine based on the actual reference template.\n\n"
+        "from collections import OrderedDict\n\n"
+        "def menu():\n"
+        "    data = OrderedDict()\n"
+        "    data['key'] = 'val'\n"
+        "    print(data)\n"
+    )
+    
+    exp = ExperimentData(
+        experiment_number="3.A",
+        title="Menu-Driven Program Using Ordered Dictionary",
+        aim="To test prompt leakage prevention.",
+        algorithm="1. Initialize dictionary.\n2. Add entries.\n3. Display.",
+        coding=leaked_input,
+        result="Success"
+    )
+    
+    DocxGenerator.generate_new_record(exp, cfg, out_file)
+    assert os.path.exists(out_file)
+    
+    doc = docx.Document(out_file)
+    full_text = " ".join([p.text for p in doc.paragraphs])
+    for tbl in doc.tables:
+        full_text += " " + " ".join([c.text for r in tbl.rows for c in r.cells])
+        
+    assert "PROJECT UPDATE" not in full_text
+    assert "General College Laboratory Record Automation System" not in full_text
+    assert "Do NOT rebuild" not in full_text
+    assert "Inspect the current implementation" not in full_text
+    assert "from collections import OrderedDict" in full_text
+
+def test_section_parser_sanitizes_pasted_prompt():
+    """Verifies that SectionParser strips developer instructions from pasted notes."""
+    from backend.parser.section_parser import SectionParser
+    raw_pasted = (
+        "# PROJECT UPDATE — EXPERIMENT HEADER + TYPOGRAPHY CORRECTION\n"
+        "You are modifying the existing General College Laboratory Record Automation System.\n"
+        "EX NO: 3.A\n"
+        "TITLE: Menu-Driven Program Using Ordered Dictionary\n"
+        "AIM:\n"
+        "To perform insert, display, and search operations using an ordered dictionary in Python.\n"
+        "ALGORITHM:\n"
+        "1. Create an empty ordered dictionary.\n"
+        "2. Display the menu.\n"
+        "CODING:\n"
+        "# PROJECT UPDATE — EXPERIMENT HEADER\n"
+        "from collections import OrderedDict\n"
+        "def menu():\n"
+        "    data = OrderedDict()\n"
+        "OUTPUT:\n"
+        "1. Insert\n"
+        "RESULT:\n"
+        "Successfully executed.\n"
+    )
+    parsed = SectionParser.parse_raw_text(raw_pasted)
+    assert parsed["experiment_number"] == "3.A"
+    assert "PROJECT UPDATE" not in parsed["coding"]
+    assert "from collections import OrderedDict" in parsed["coding"]
+    assert "PROJECT UPDATE" not in parsed["aim"]
+
+def test_prompt_only_input_uses_safe_academic_fallback():
+    """Verifies that if an entire field is composed of prompt text, a safe fallback is applied."""
+    prompt_only = (
+        "# PROJECT UPDATE — EXPERIMENT HEADER + TYPOGRAPHY CORRECTION\n"
+        "You are modifying the existing General College Laboratory Record Automation System.\n"
+        "Do NOT rebuild the project from scratch.\n"
+    )
+    exp = ExperimentData(
+        experiment_number="1.A",
+        title=prompt_only,
+        aim=prompt_only,
+        algorithm=prompt_only,
+        coding=prompt_only,
+        result=prompt_only
+    )
+    assert exp.title == "LAB EXPERIMENT"
+    assert "PROJECT UPDATE" not in exp.coding
+    assert "PROJECT UPDATE" not in exp.aim
+    assert "PROJECT UPDATE" not in exp.algorithm
+    assert "PROJECT UPDATE" not in exp.result
+    assert "executed successfully" in exp.coding.lower()

@@ -957,10 +957,6 @@ body {
   border-right: none !important;
 }
 
-.preview-header-table tr:last-child td {
-  border-bottom: none !important;
-}
-
 .cell-ex-date {
   width: 29.5%;
   font-size: 0.8rem;
@@ -1079,23 +1075,17 @@ body {
 
 .preview-eval-table td {
   border: 1px solid #000000;
-  padding: 2.5px 5px;
-  font-size: 0.68rem;
+  padding: 3px 6px;
+  font-size: 0.70rem;
   font-weight: 700;
   font-family: 'Times New Roman', Times, serif;
-}
-
-.signature-cell {
-  text-align: center;
-  height: 24px;
 }
 
 /* Document Running Footer */
 .doc-footer {
   display: flex;
   justify-content: space-between;
-  border-top: 1.5px solid #000000;
-  padding: 6px 16px;
+  padding: 8px 16px;
   font-family: 'Times New Roman', Times, serif;
   font-size: 0.72rem; /* 11 pt */
   font-weight: 700;

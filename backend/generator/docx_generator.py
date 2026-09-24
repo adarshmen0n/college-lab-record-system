@@ -20,6 +20,11 @@ from ..models.schemas import ExperimentData, TemplateConfig
 from ..layout.page_engine import PageEngine, ExperimentLayoutPlan
 from .tables import TableManager
 
+try:
+    from ..sanitizer import sanitize_text
+except (ImportError, ValueError):
+    from backend.sanitizer import sanitize_text
+
 class DocxGenerator:
     @staticmethod
     def _apply_section_formatting(section, config: TemplateConfig, student_name: str, roll_no: str):
@@ -164,39 +169,20 @@ class DocxGenerator:
                 r_err = p_err.add_run(f"[Screenshot attached: {os.path.basename(img_item)}]")
                 r_err.font.italic = True
 
-    FORBIDDEN_LEAKAGE_STRINGS = [
-        "MASTER UPDATE PROMPT",
-        "FINAL MASTER EXECUTION PROMPT",
-        "PROJECT UPDATE — EXPERIMENT HEADER",
-        "YOU ARE MODIFYING THE EXISTING",
-        "YOU ARE WORKING ON THE EXISTING",
-        "DO NOT REBUILD THE PROJECT",
-        "ANTIGRAVITY INSTRUCTIONS",
-        "DEVELOPER INSTRUCTIONS",
-        "IMPLEMENTATION INSTRUCTIONS",
-        "SYSTEM PROMPT"
-    ]
-
     @classmethod
-    def _sanitize_field(cls, text: Optional[str]) -> str:
+    def _sanitize_field(cls, text: Optional[str], field_name: Optional[str] = None) -> str:
         """Strips out accidental prompt or developer instruction leakage before entering document."""
-        if not text:
-            return ""
-        cleaned = text
-        for s in cls.FORBIDDEN_LEAKAGE_STRINGS:
-            pattern = re.compile(re.escape(s), re.IGNORECASE)
-            cleaned = pattern.sub("", cleaned)
-        return cleaned.strip()
+        return sanitize_text(text, field_name=field_name)
 
     @classmethod
     def _render_experiment_pages(cls, doc: docx.Document, plan: ExperimentLayoutPlan, data: ExperimentData, config: TemplateConfig):
         """Renders the planned pages into the docx Document with strict 14pt headings and 12pt content."""
         data_clean = data.model_copy()
-        data_clean.aim = cls._sanitize_field(data.aim)
-        data_clean.algorithm = cls._sanitize_field(data.algorithm)
-        data_clean.coding = cls._sanitize_field(data.coding)
-        data_clean.output = cls._sanitize_field(data.output)
-        data_clean.result = cls._sanitize_field(data.result)
+        data_clean.aim = cls._sanitize_field(data.aim, "aim")
+        data_clean.algorithm = cls._sanitize_field(data.algorithm, "algorithm")
+        data_clean.coding = cls._sanitize_field(data.coding, "coding")
+        data_clean.output = cls._sanitize_field(data.output, "output")
+        data_clean.result = cls._sanitize_field(data.result, "result")
 
         proc_raw = (data.procedure_heading or 'ALGORITHM').strip().rstrip(':')
         proc_heading = f"{proc_raw}:"

@@ -201,6 +201,53 @@ print(f"Sum: {total}")`,
     inlineStatusBanner.classList.remove("hidden");
   }
 
+  // --- PROMPT LEAKAGE SANITIZER ---
+  const LEAKAGE_PATTERNS = [
+    /#?\s*PROJECT\s+UPDATE/i,
+    /EXPERIMENT\s+HEADER\s*\+?\s*TYPOGRAPHY\s+CORRECTION/i,
+    /You\s+are\s+modifying\s+the\s+existing/i,
+    /You\s+are\s+working\s+on\s+the\s+existing/i,
+    /You\s+are\s+fixing\s+an\s+existing/i,
+    /Do\s+NOT\s+rebuild\s+the\s+project/i,
+    /Inspect\s+the\s+current\s+implementation/i,
+    /FINAL\s+MASTER\s+EXECUTION\s+PROMPT/i,
+    /FINAL\s+MASTER\s+FIX/i,
+    /STOP\s*[—–-]\s*CURRENT\s+OUTPUT/i,
+    /CURRENT\s+OUTPUT\s+HAS\s+FAILED/i,
+    /THE\s+CURRENT\s+OUTPUT\s+IS\s+NOT\s+ACCEPTED/i,
+    /FIRST\s+FIX/i,
+    /TRACE\s+THE\s+ENTIRE\s+DATA\s+PIPELINE/i,
+    /GENERAL\s+COLLEGE\s+LABORATORY\s+RECORD\s+AUTOMATION\s+SYSTEM/i,
+    /COMPLETE\s+TEMPLATE\s+MATCHING/i,
+    /DO\s+NOT\s+APPROXIMATE/i,
+    /DO\s+NOT\s+DESIGN\s+THE\s+DOCUMENT/i,
+    /MASTER\s+UPDATE\s+PROMPT/i,
+    /ANTIGRAVITY/i,
+    /DEVELOPER\s+INSTRUCTIONS/i,
+    /SYSTEM\s+PROMPT/i
+  ];
+
+  function sanitizeFieldText(text) {
+    if (!text) return "";
+    const lines = text.split("\n");
+    const filtered = lines.filter(line => !LEAKAGE_PATTERNS.some(pat => pat.test(line)));
+    return filtered.join("\n").trim();
+  }
+
+  function sanitizeExperiment(exp) {
+    if (!exp) return exp;
+    return {
+      ...exp,
+      title: sanitizeFieldText(exp.title) || "LAB EXPERIMENT",
+      subtitle: sanitizeFieldText(exp.subtitle),
+      aim: sanitizeFieldText(exp.aim) || "To execute and verify the laboratory experiment.",
+      algorithm: sanitizeFieldText(exp.algorithm) || "1. Initialize variables.\n2. Execute logic.\n3. Display results.",
+      coding: sanitizeFieldText(exp.coding) || "def main():\n    print(\"Executed successfully\")",
+      output: sanitizeFieldText(exp.output),
+      result: sanitizeFieldText(exp.result) || "The experiment was successfully executed."
+    };
+  }
+
   // --- WORKSPACE STORAGE HELPERS ---
   const WS_STORAGE_KEY = "recordext_workspace_v2";
 
@@ -213,7 +260,9 @@ print(f"Sum: {total}")`,
         localStorage.setItem(WS_STORAGE_KEY, JSON.stringify(initial));
         return initial;
       }
-      return JSON.parse(data);
+      const list = JSON.parse(data);
+      // Cleanse any old cached instructions from localStorage
+      return list.map(exp => sanitizeExperiment(exp));
     } catch (e) {
       console.error("Workspace load error:", e);
       return [];
@@ -230,7 +279,7 @@ print(f"Sum: {total}")`,
   }
 
   function getCurrentFormExperiment() {
-    return {
+    const raw = {
       id: editingWorkspaceId || `exp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       experiment_number: (expNumberInput.value.trim()) || "1.D",
       title: (expTitleInput.value.trim()) || "LAB EXPERIMENT",
@@ -247,6 +296,7 @@ print(f"Sum: {total}")`,
       output_images: attachedImageData ? [attachedImageData] : [],
       result: (expResultInput.value.trim()) || "The program was executed and verified successfully."
     };
+    return sanitizeExperiment(raw);
   }
 
   function fillExperimentForm(data) {
@@ -780,11 +830,10 @@ print(f"Sum: {total}")`,
         evalWrap.className = "preview-eval-container";
         evalWrap.innerHTML = `
           <table class="preview-eval-table">
-            <tr><td>PROGRAM AND EXECUTION</td><td style="width:25%;text-align:center;">30</td></tr>
-            <tr><td>VIVA VOCE</td><td style="text-align:center;">10</td></tr>
-            <tr><td>RECORD MARKS</td><td style="text-align:center;">10</td></tr>
-            <tr><td>TOTAL</td><td style="text-align:center;">50</td></tr>
-            <tr><td class="signature-cell" colspan="2">STAFF SIGNATURE</td></tr>
+            <tr><td>PROGRAM AND EXECUTION</td><td style="width:37.5%;text-align:center;"></td></tr>
+            <tr><td>CLASS PERFORMANCE</td><td style="text-align:center;"></td></tr>
+            <tr><td>VIVA</td><td style="text-align:center;"></td></tr>
+            <tr><td>TOTAL</td><td style="text-align:center;"></td></tr>
           </table>
         `;
         content.appendChild(evalWrap);
@@ -1505,6 +1554,55 @@ print(f"Sum: {total}")`,
     localStorage.setItem("lab_record_drafts", JSON.stringify(drafts));
     loadDrafts();
   };
+
+  // --- IMPORT RAW NOTES MODAL ---
+  if (btnImportNotes && importModal) {
+    btnImportNotes.addEventListener("click", () => {
+      importModal.classList.remove("hidden");
+      if (importRawText) importRawText.focus();
+    });
+  }
+
+  function closeImportModal() {
+    if (importModal) importModal.classList.add("hidden");
+  }
+
+  if (btnCloseImport) btnCloseImport.addEventListener("click", closeImportModal);
+  if (btnCancelImport) btnCancelImport.addEventListener("click", closeImportModal);
+
+  if (btnApplyImport && importRawText) {
+    btnApplyImport.addEventListener("click", async () => {
+      const rawText = sanitizeFieldText(importRawText.value.trim());
+      if (!rawText) {
+        showStatus("error", "Please paste your experiment notes first.");
+        return;
+      }
+      try {
+        btnApplyImport.disabled = true;
+        btnApplyImport.textContent = "Parsing...";
+        const resp = await fetch("/api/experiment/parse-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: rawText })
+        });
+        const res = await resp.json();
+        if (res.success && res.data) {
+          fillExperimentForm(res.data);
+          closeImportModal();
+          showStatus("success", "Successfully parsed and populated experiment fields.");
+          schedulePreviewUpdate();
+        } else {
+          showStatus("error", "Failed to parse experiment text.");
+        }
+      } catch (err) {
+        console.error("Import error:", err);
+        showStatus("error", "Error contacting parser backend.");
+      } finally {
+        btnApplyImport.disabled = false;
+        btnApplyImport.textContent = "Parse & Populate Form";
+      }
+    });
+  }
 
   // --- INITIALIZE ON PAGE LOAD ---
   fillExperimentForm(DEFAULT_EXPERIMENT);

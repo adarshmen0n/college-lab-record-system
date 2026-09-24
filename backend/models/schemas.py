@@ -2,7 +2,12 @@
 Pydantic schemas for the College Laboratory Record Automation System.
 """
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+try:
+    from ..sanitizer import sanitize_text
+except (ImportError, ValueError):
+    from backend.sanitizer import sanitize_text
 
 class ExperimentData(BaseModel):
     experiment_number: str = Field(..., description="Explicit user-provided experiment number (e.g. '1.D', '24')")
@@ -20,6 +25,15 @@ class ExperimentData(BaseModel):
     subject: Optional[str] = Field("General", description="Subject domain: Python, Java, C/C++, DBMS, Linux, Networks, AIML, etc.")
     student_name: Optional[str] = Field("ADARSH MENON", description="Student Name for footer")
     register_number: Optional[str] = Field("714025247005", description="Register / Roll Number for footer")
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            for f in ["title", "subtitle", "aim", "algorithm", "coding", "output", "result"]:
+                if f in data and isinstance(data[f], str):
+                    data[f] = sanitize_text(data[f], field_name=f)
+        return data
 
 class MarginConfig(BaseModel):
     top: float = 0.75

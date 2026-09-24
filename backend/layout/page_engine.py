@@ -9,6 +9,11 @@ from pydantic import BaseModel, Field
 from ..models.schemas import ExperimentData, TemplateConfig, PagePreviewData
 from .overflow import OverflowHandler
 
+try:
+    from ..sanitizer import sanitize_text
+except (ImportError, ValueError):
+    from backend.sanitizer import sanitize_text
+
 class PagePlan(BaseModel):
     page_index: int
     page_type: str  # "EXP_START", "OUTPUT", "EXP_CONT", "BLANK_BACK"
@@ -38,21 +43,27 @@ class PageEngine:
         - Page 4 (Left): Blank / Spacer (with Border & Footer)
         """
         # Clean and split inputs
-        algo_steps = [s.strip() for s in data.algorithm.strip().split("\n") if s.strip()]
+        aim_clean = sanitize_text(data.aim, "aim")
+        algo_clean = sanitize_text(data.algorithm, "algorithm")
+        coding_clean = sanitize_text(data.coding, "coding")
+        output_clean = sanitize_text(data.output, "output")
+        result_clean = sanitize_text(data.result, "result")
+
+        algo_steps = [s.strip() for s in algo_clean.strip().split("\n") if s.strip()]
         # Strip numbers if already present (e.g. "1. Step" -> "Step") to avoid double numbering
         cleaned_steps = []
         for step in algo_steps:
             cleaned = step.lstrip("0123456789.-) ").strip()
             cleaned_steps.append(cleaned if cleaned else step)
 
-        code_lines = data.coding.split("\n")
-        output_lines = [l for l in data.output.split("\n")] if data.output else []
+        code_lines = coding_clean.split("\n")
+        output_lines = [l for l in output_clean.split("\n")] if output_clean else []
 
         # Split code across Page 1 and Page 3
         code_p1, code_p3 = OverflowHandler.calculate_code_split(
             code_lines=code_lines,
             algo_steps_count=len(cleaned_steps),
-            aim_text=data.aim
+            aim_text=aim_clean
         )
 
         # Split output if multi-page output
@@ -134,21 +145,26 @@ class PageEngine:
             }
 
             # Page 1: EXP_START (RIGHT)
+            title_clean = sanitize_text(exp.title, "title")
+            subtitle_clean = sanitize_text(exp.subtitle, "subtitle")
+            aim_clean = sanitize_text(exp.aim, "aim")
+            result_clean = sanitize_text(exp.result, "result")
+
             all_pages.append(PagePreviewData(
                 page_number=current_page_no,
                 total_pages=total_pages,
                 experiment_number=exp.experiment_number,
-                experiment_title=exp.title,
+                experiment_title=title_clean,
                 page_type="EXP_START",
                 side="RIGHT",
                 is_blank=False,
                 has_header_table=True,
                 header_ex_no=exp.experiment_number,
                 header_date=exp.date,
-                header_title=exp.title,
-                header_subtitle=exp.subtitle,
+                header_title=title_clean,
+                header_subtitle=subtitle_clean,
                 aim_heading="AIM:",
-                aim_text=exp.aim,
+                aim_text=aim_clean,
                 procedure_heading=f"{exp.procedure_heading or 'ALGORITHM'}:",
                 algorithm_steps=exp_p1.algorithm_steps,
                 code_heading=f"{exp.code_heading or 'CODING'}:",
@@ -165,7 +181,7 @@ class PageEngine:
                 page_number=current_page_no,
                 total_pages=total_pages,
                 experiment_number=exp.experiment_number,
-                experiment_title=exp.title,
+                experiment_title=title_clean,
                 page_type="OUTPUT",
                 side="LEFT",
                 is_blank=False,
@@ -185,7 +201,7 @@ class PageEngine:
                 page_number=current_page_no,
                 total_pages=total_pages,
                 experiment_number=exp.experiment_number,
-                experiment_title=exp.title,
+                experiment_title=title_clean,
                 page_type="EXP_CONT",
                 side="RIGHT",
                 is_blank=False,
@@ -193,7 +209,7 @@ class PageEngine:
                 code_lines=exp_p3.code_lines,
                 has_evaluation_table=True,
                 result_heading="RESULT:",
-                result_text=exp.result,
+                result_text=result_clean,
                 footer_left=student_name,
                 footer_right=register_number,
                 margins_in=margins_dict,
